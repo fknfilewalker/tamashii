@@ -1,0 +1,16 @@
+[build-system]
+# the bundled slangpy (setup.py): uv builds it, its stubs import it and are rewritten with libcst
+requires = ["setuptools>=77", "uv", "numpy>=1.26.0", "typing_extensions", "libcst"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tamashii"
+version = "0.1.0"
+requires-python = ">=3.12"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+# slangpy is the ./slangpy submodule, bundled by setup.py or installed separately
+dependencies = ["numpy", "trimesh", "pyimgui[sdl3]", "pygltflib"]
+
+[tool.setuptools.package-data]
+tamashii = ["*.slang", "plugins/**/*.slang", "renderpasses/*.slang", "_slangpy/**/*"]

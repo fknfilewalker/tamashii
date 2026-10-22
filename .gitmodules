@@ -1,0 +1,4 @@
+[submodule "slangpy"]
+	path = slangpy
+	url = https://github.com/shader-slang/slangpy
+	branch = main

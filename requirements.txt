@@ -1,0 +1,8 @@
+# install -r requirements.txt -U
+# the same as pyproject.toml's dependencies; slangpy is bundled from the submodule on install
+numpy
+trimesh
+pyimgui[sdl3]
+pygltflib
+# optional: torch interop (tamashii.torch, examples/torch_interop.py)
+# torch
