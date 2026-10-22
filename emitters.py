@@ -200,6 +200,11 @@ class HosekWilkie(Emitter):
         self.latitude, self.longitude, self.timezone = 0.0, 0.0, 0.0
         self.year, self.month, self.day = 2025, 6, 21
         self.hour, self.minute, self.second = 12.0, 0.0, 0.0
+        # set by configure()
+        self.turbidity: float
+        self.elevation: float
+        self.azimuth: float
+        self.albedo: float
         self.configure(turbidity, elevation, azimuth, albedo)
 
     def configure(self,
