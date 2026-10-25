@@ -8,6 +8,8 @@ class Shape(core.Interface):
     INTERFACE = "IShape<float>"
     blas: spy.AccelerationStructure | None = None
     mask: int = 0xFF
+    bsdf: int
+    emission: 'spy.float3param'
     to_world: 'spy.float4x4'
     to_world_tensor: spy.Tensor | None = None
 
@@ -336,6 +338,36 @@ class Mesh(Shape):
     def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
         pass
 
+class Instance(Shape):
+    """Another placement of `shape`: shares its geometry buffers and BLAS, with its own
+    bsdf, emission, transform and mask (defaulting to the shape's)."""
+
+    def __init__(self,
+                 shape: Shape,
+                 bsdf: int | None=None,
+                 emission: 'spy.float3param | None'=None,
+                 to_world: core.Transform | None=None,
+                 mask: int | None=None,
+                 name: str=""):
+        self.shape = shape
+        self.bsdf = shape.bsdf if bsdf is None else bsdf
+        self.emission = shape.emission if emission is None else emission
+        self.to_world = shape.to_world if to_world is None else spy.math.transpose(to_world)
+        self.mask = shape.mask if mask is None else mask
+        self.name = name
+
+    blas = property(lambda self: self.shape.blas)  # type: ignore[assignment]
+    implementation_type_name = property(lambda self: self.shape.implementation_type_name)  # type: ignore[override]
+
+    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+        self.shape.upload(program, cursor)
+        cursor.data.bsdf = self.bsdf
+        cursor.data.emission = self.emission
+        self.to_world_tensor = core.upload_transform(program, cursor, "to_world", self.to_world_tensor, self.to_world)
+
+    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+        pass
+
 class AccelerationStructure:
     def __init__(self, device: spy.Device):
         super().__init__()
@@ -426,6 +458,8 @@ class AccelerationStructure:
             shape = shapes[i]
             if isinstance(shape, emitters.Area):
                 shape = shape.shape
+            if isinstance(shape, Instance):
+                shape = shape.shape
             if not isinstance(shape, Mesh):
                 continue
             
@@ -467,21 +501,25 @@ class AccelerationStructure:
     def update_tlas(self, shapes: list[Shape]):
         # slang-rhi's Metal backend nulls a freed acceleration structure in the list every TLAS build
         # hands to Metal, and the next build aborts. Keep the BLASes of removed or rebuilt shapes alive.
-        in_use = {id(s.blas): s.blas for s in shapes if getattr(s, "blas", None) is not None}
+        in_use = {id(s.blas): s.blas for s in shapes if s.blas is not None}
         self._retired_blas += [b for key, b in self._blas_in_use.items() if key not in in_use]
         self._blas_in_use = in_use
 
         instance_list = self.device.create_acceleration_structure_instance_list(len(shapes))
         for i, shape in enumerate(shapes):
-            if isinstance(shape, Sphere):
-                blas_handle = self.unit_aabb_blas.handle
+            geometry = shape
+            if isinstance(geometry, Instance):
+                geometry = geometry.shape
+            if isinstance(geometry, Sphere):
+                blas = self.unit_aabb_blas
                 hit_index = 2
-            elif isinstance(shape, Rectangle):
-                blas_handle = self.unit_rect_blas.handle
+            elif isinstance(geometry, Rectangle):
+                blas = self.unit_rect_blas
                 hit_index = 1
             else:
-                blas_handle = shape.blas.handle
+                blas = geometry.blas
                 hit_index = 0
+            assert blas is not None, f"shape '{geometry.name}' has no BLAS, run update_blas first"
 
             instance_list.write(i, {
                 "transform": spy.float3x4(spy.math.transpose(shape.to_world)),
@@ -489,7 +527,7 @@ class AccelerationStructure:
                 "instance_mask": shape.mask,
                 "instance_contribution_to_hit_group_index": hit_index,
                 "flags": spy.AccelerationStructureInstanceFlags.none,
-                "acceleration_structure": blas_handle,
+                "acceleration_structure": blas.handle,
             })
 
         tlas_build_desc = spy.AccelerationStructureBuildDesc({
