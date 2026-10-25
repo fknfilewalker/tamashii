@@ -7,6 +7,7 @@ import tamashii.emitters as emitters
 class Shape(core.Interface):
     INTERFACE = "IShape<float>"
     blas: spy.AccelerationStructure | None = None
+    mask: int = 0xFF
     to_world: 'spy.float4x4'
     to_world_tensor: spy.Tensor | None = None
 
@@ -17,8 +18,10 @@ class Rectangle(Shape):
                  scale: 'spy.float2param'=spy.float2(1.0),
                  emission: 'spy.float3param'=spy.float3(0.0), 
                  to_world: core.Transform=core.Transform(), 
+                 mask: int=0xFF,
                  name: str=""):
         self.name = name
+        self.mask = mask
         self.to_world = spy.math.transpose(to_world.scale(spy.float3(scale[0], 1.0, scale[1])))
         self.bsdf = bsdf
         self.film = 0
@@ -43,8 +46,10 @@ class Sphere(Shape):
                  radius: float=0.5, 
                  emission: 'spy.float3param'=spy.float3(0.0), 
                  to_world: core.Transform=core.Transform(), 
+                 mask: int=0xFF,
                  name: str=""):
         self.name = name
+        self.mask = mask
         self.to_world = spy.math.transpose(to_world.scale(spy.float3(2 * radius)))
         self.bsdf = bsdf
         self.film = 0
@@ -73,9 +78,11 @@ class Mesh(Shape):
                  colors: npt.NDArray[np.float32]=np.array([], dtype=np.float32),
                  emission: 'spy.float3param'=spy.float3(0.0), 
                  to_world: core.Transform=core.Transform(), 
+                 mask: int=0xFF,
                  name: str=""):
         assert len(vertices), "Mesh needs at least one vertex"
         self.name = name
+        self.mask = mask
         self.to_world = spy.math.transpose(to_world)
         self.bsdf = bsdf
         self.film = 0
@@ -286,6 +293,7 @@ class Mesh(Shape):
     def from_file(bsdf: int, 
                   file: str, *, 
                   to_world: 'spy.float4x4param'=spy.float4x4().identity(),
+                  mask: int=0xFF,
                   name: str=""):
         import trimesh
         mesh = trimesh.load(file)
@@ -302,7 +310,7 @@ class Mesh(Shape):
             colors = (mesh.visual.vertex_colors / 255.0).astype(np.float32).flatten()
         else:
             colors = np.ones(len(mesh.vertices) * 3, dtype=np.float32)
-        return Mesh(name=name, bsdf=bsdf, vertices=vertices, indices=indices, normals=normals, texcoords=texcoords, to_world=to_world)
+        return Mesh(name=name, bsdf=bsdf, vertices=vertices, indices=indices, normals=normals, texcoords=texcoords, to_world=to_world, mask=mask)
 
     def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
         cursor.id = self.conformance_id
@@ -478,7 +486,7 @@ class AccelerationStructure:
             instance_list.write(i, {
                 "transform": spy.float3x4(spy.math.transpose(shape.to_world)),
                 "instance_id": i,
-                "instance_mask": 0xFF,
+                "instance_mask": shape.mask,
                 "instance_contribution_to_hit_group_index": hit_index,
                 "flags": spy.AccelerationStructureInstanceFlags.none,
                 "acceleration_structure": blas_handle,
