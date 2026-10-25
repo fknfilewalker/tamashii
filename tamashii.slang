@@ -54,6 +54,7 @@ __include "integrators/aov.slang";
 
 __include "colormap.slang";
 __include "colormaps/coolwarm.slang";
+__include "colormaps/fast.slang";
 
 __include "film.slang";
 __include "films/hdr_texture_2d.slang";

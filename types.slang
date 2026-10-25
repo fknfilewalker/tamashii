@@ -1670,6 +1670,50 @@ namespace post {
         return c.z * lerp(vector<Real, 3>(Real(1)), saturate(p - vector<Real, 3>(Real(1))), c.y);
     }
 
+    // CIE XYZ -> linear sRGB (D65 white at xy 0.312713, 0.329016)
+    [Differentiable, ForceInline, PreferRecompute]
+    __generic<Real : floating_point>
+    public vector<Real, 3> xyz_to_linear_srgb(const vector<Real, 3> xyz) {
+        let m = matrix<Real, 3, 3>(
+            Real(3.240812398895283), Real(-1.5373084456298136), Real(-0.4985865229069666),
+            Real(-0.9692430170086407), Real(1.8759663029085742), Real(0.04155503085668564),
+            Real(0.055638398436112804), Real(-0.20400746093241362), Real(1.0571295702861434));
+        return mul(m, xyz);
+    }
+
+    // linear sRGB -> CIE XYZ (D65 white at xy 0.312713, 0.329016)
+    [Differentiable, ForceInline, PreferRecompute]
+    __generic<Real : floating_point>
+    public vector<Real, 3> linear_srgb_to_xyz(const vector<Real, 3> rgb) {
+        let m = matrix<Real, 3, 3>(
+            Real(0.41241084648853887), Real(0.3575845678529519), Real(0.18045380393360835),
+            Real(0.21264934272065286), Real(0.71516913570590379), Real(0.072181521573443347),
+            Real(0.019331758429150261), Real(0.11919485595098397), Real(0.95039003405033728));
+        return mul(m, rgb);
+    }
+
+    // CIE XYZ -> Lab, relative to the same D65 white as xyz_to_linear_srgb
+    [Differentiable, ForceInline, PreferRecompute]
+    __generic<Real : floating_point>
+    public vector<Real, 3> xyz_to_lab(const vector<Real, 3> xyz) {
+        let t = xyz / vector<Real, 3>(Real(0.9504492182750991), Real(1), Real(1.0889166484304715));
+        // exact CIE constants: delta = 6/29
+        let lin = t * Real(841.0 / 108.0) + Real(4.0 / 29.0);
+        let f = select(t > Real(216.0 / 24389.0), pow(max(t, Real(0)), vector<Real, 3>(Real(1.0 / 3.0))), lin);
+        return vector<Real, 3>(Real(116) * f.y - Real(16), Real(500) * (f.x - f.y), Real(200) * (f.y - f.z));
+    }
+
+    // CIE Lab -> XYZ, relative to the same D65 white as xyz_to_linear_srgb
+    [Differentiable, ForceInline, PreferRecompute]
+    __generic<Real : floating_point>
+    public vector<Real, 3> lab_to_xyz(const vector<Real, 3> lab) {
+        let fy = (lab.x + Real(16)) / Real(116);
+        let f = vector<Real, 3>(lab.y / Real(500) + fy, fy, fy - lab.z / Real(200));
+        // exact CIE constants: delta = 6/29
+        let lin = Real(3.0 * 36.0 / 841.0) * (f - Real(4.0 / 29.0));
+        return select(f > Real(6.0 / 29.0), f * f * f, lin) * vector<Real, 3>(Real(0.9504492182750991), Real(1), Real(1.0889166484304715));
+    }
+
     // from https://developer.blender.org/diffusion/B/browse/master/intern/opencolorio/gpu_shader_display_transform.glsl$142
     __generic<Real : floating_point, int N>
     public vector<Real, N> dither(const vector<Real, N> color, const Real strength, const Real random) {
