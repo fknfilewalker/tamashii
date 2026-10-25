@@ -567,9 +567,6 @@ public enum class RenderMode {
 
 public struct HitMask {
     public static const uint32_t none = 0x00;
-    public static const uint32_t shape = 0x01;
-    public static const uint32_t emitter = 0x02;
-    public static const uint32_t sensor = 0x04;
     public static const uint32_t all = 0xFF;
 };
 

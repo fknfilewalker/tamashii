@@ -1,8 +1,7 @@
 implementing tamashii;
 
 namespace bsdfs {
-    __generic<Real : floating_point>
-    public struct Conductor : IBsdf<Real>, IDifferentiable {
+    public struct Conductor<Real : floating_point> : IBsdf<Real>, IDifferentiable {
         public Texture<vector<Real, 3>> reflectance;
         public Texture<Real> roughness;
         public Texture<vector<Real, 3>> eta;

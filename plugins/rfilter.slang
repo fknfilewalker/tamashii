@@ -6,8 +6,7 @@ public struct FilterSample<Real : floating_point> : IDifferentiable {
 };
 
 [anyValueSize(settings::rfilter_interface_size)]
-__generic<Real : floating_point>
-public dyn interface IRFilter {
+public dyn interface IRFilter<Real : floating_point> {
     public property Real radius;
 
     [Differentiable]
