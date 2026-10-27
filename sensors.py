@@ -74,17 +74,16 @@ class Perspective(Camera):
                  name: str = ""):
         return Perspective(spy.math.matrix_from_look_at(spy.float3(*eye), spy.float3(*target), spy.float3(*up), spy.math.Handedness.right_handed), film, fov, fov_axis, near, far, name, spy.math.length(spy.float3(*eye) - spy.float3(*target)))
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        cursor.id = self.conformance_id
-        # cursor.data.film.samples = 0
-        cursor.data.sfilm.texture = core.set_tensor(cursor.data.sfilm.texture, self.film.texture)
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        # cursor.film.samples = 0
+        cursor.sfilm.texture = core.set_tensor(cursor.sfilm.texture, self.film.texture)
         self.to_sensor_tensor = core.upload_transform(program, cursor, "to_sensor", self.to_sensor_tensor, self.to_sensor)
         self.to_sample_tensor = core.upload_transform(program, cursor, "to_sample", self.to_sample_tensor, self.to_sample)
-        cursor.data.near = self.near
-        cursor.data.far = self.far
-        cursor.data.rfilter.radius = self.rfilter.radius
+        cursor.near = self.near
+        cursor.far = self.far
+        cursor.rfilter.radius = self.rfilter.radius
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
         pass
 
     def update_projection(self):

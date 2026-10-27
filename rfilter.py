@@ -12,12 +12,11 @@ class Box(RFilter):
         self.name = name
         self.radius = radius
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        cursor.id = self.conformance_id
-        cursor.data.radius = self.radius
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        cursor.radius = self.radius
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        self.radius = cursor.data.radius
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+        self.radius = cursor.radius
 
 class Tent(RFilter):
 
@@ -27,12 +26,11 @@ class Tent(RFilter):
         self.name = name
         self.radius = radius
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        cursor.id = self.conformance_id
-        cursor.data.radius = self.radius
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        cursor.radius = self.radius
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        self.radius = cursor.data.radius
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+        self.radius = cursor.radius
 
 core.register_plugin(Box, "rfilters::Box<float>")
 core.register_plugin(Tent, "rfilters::Tent<float>")

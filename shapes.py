@@ -29,16 +29,15 @@ class Rectangle(Shape):
         self.film = 0
         self.emission = emission
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        cursor.id = self.conformance_id
-        cursor.data.bsdf = self.bsdf
-        cursor.data.film = self.film
-        cursor.data.emission = self.emission
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        cursor.bsdf = self.bsdf
+        cursor.film = self.film
+        cursor.emission = self.emission
         self.to_world_tensor = core.upload_transform(program, cursor, "to_world", self.to_world_tensor, self.to_world)
-        cursor.data.aabb.min = spy.float3(-0.5, 0.0, -0.5)
-        cursor.data.aabb.max = spy.float3(0.5, 0.0, 0.5)
+        cursor.aabb.min = spy.float3(-0.5, 0.0, -0.5)
+        cursor.aabb.max = spy.float3(0.5, 0.0, 0.5)
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
         pass
 
 class Sphere(Shape):
@@ -57,16 +56,15 @@ class Sphere(Shape):
         self.film = 0
         self.emission = emission
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        cursor.id = self.conformance_id
-        cursor.data.bsdf = self.bsdf
-        cursor.data.emission = self.emission
-        cursor.data.film = self.film
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        cursor.bsdf = self.bsdf
+        cursor.emission = self.emission
+        cursor.film = self.film
         self.to_world_tensor = core.upload_transform(program, cursor, "to_world", self.to_world_tensor, self.to_world)
-        cursor.data.aabb.min = spy.float3(-0.5)
-        cursor.data.aabb.max = spy.float3(0.5)
+        cursor.aabb.min = spy.float3(-0.5)
+        cursor.aabb.max = spy.float3(0.5)
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
         pass
 
 class Mesh(Shape):
@@ -314,13 +312,12 @@ class Mesh(Shape):
             colors = np.ones(len(mesh.vertices) * 3, dtype=np.float32)
         return Mesh(name=name, bsdf=bsdf, vertices=vertices, indices=indices, normals=normals, texcoords=texcoords, to_world=to_world, mask=mask)
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        cursor.id = self.conformance_id
-        cursor.data.bsdf = self.bsdf
-        cursor.data.film = self.film
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        cursor.bsdf = self.bsdf
+        cursor.film = self.film
         self.to_world_tensor = core.upload_transform(program, cursor, "to_world", self.to_world_tensor, self.to_world)
-        cursor.data.emission = self.emission
-        # cursor.data.colors = 0
+        cursor.emission = self.emission
+        # cursor.colors = 0
         self.positions = core.upload_tensor(program, cursor, "positions", self.positions, self.vertices.reshape(-1, 3), "float3")
         self.ibuffer = core.upload_tensor(program, cursor, "indices", self.ibuffer, self.indices.reshape(-1, 3), "uint3")
         self.nbuffer = core.upload_tensor(program, cursor, "normals", self.nbuffer, self.normals.reshape(-1, 3), "float3")
@@ -330,12 +327,12 @@ class Mesh(Shape):
 
         if len(self.colors):
             self.cbuffer = core.create_or_resize_buffer(program.device, self.cbuffer, self.colors, "Mesh.color_buffer")
-            cursor.data.colors = self.cbuffer.device_address
+            cursor.colors = self.cbuffer.device_address
 
-        cursor.data.aabb.min = self.aabb_min
-        cursor.data.aabb.max = self.aabb_max
+        cursor.aabb.min = self.aabb_min
+        cursor.aabb.max = self.aabb_max
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
         pass
 
 class Instance(Shape):
@@ -359,13 +356,13 @@ class Instance(Shape):
     blas = property(lambda self: self.shape.blas)  # type: ignore[assignment]
     implementation_type_name = property(lambda self: self.shape.implementation_type_name)  # type: ignore[override]
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        self.shape.upload(program, cursor)
-        cursor.data.bsdf = self.bsdf
-        cursor.data.emission = self.emission
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        self.shape.write(program, cursor)
+        cursor.bsdf = self.bsdf
+        cursor.emission = self.emission
         self.to_world_tensor = core.upload_transform(program, cursor, "to_world", self.to_world_tensor, self.to_world)
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
         pass
 
 class AccelerationStructure:

@@ -23,11 +23,10 @@ class Diffuse(Bsdf):
         self.name = name
         self.reflectance = reflectance
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        cursor.id = self.conformance_id
-        self.reflectance.set(cursor.data.reflectance)
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        self.reflectance.set(cursor.reflectance)
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
         pass
 
 class Plastic(Bsdf):
@@ -44,14 +43,13 @@ class Plastic(Bsdf):
         self.eta_i = eta_i
         self.eta_t = eta_t
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        cursor.id = self.conformance_id
-        self.reflectance.set(cursor.data.reflectance)
-        self.roughness.set(cursor.data.roughness)
-        self.eta_i.set(cursor.data.eta_i)
-        self.eta_t.set(cursor.data.eta_t)
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        self.reflectance.set(cursor.reflectance)
+        self.roughness.set(cursor.roughness)
+        self.eta_i.set(cursor.eta_i)
+        self.eta_t.set(cursor.eta_t)
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
         pass
 
 class Dielectric(Bsdf):
@@ -68,14 +66,13 @@ class Dielectric(Bsdf):
         self.eta_i = eta_i
         self.eta_t = eta_t
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        cursor.id = self.conformance_id
-        self.reflectance.set(cursor.data.reflectance)
-        self.roughness.set(cursor.data.roughness)
-        self.eta_i.set(cursor.data.eta_i)
-        self.eta_t.set(cursor.data.eta_t)
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        self.reflectance.set(cursor.reflectance)
+        self.roughness.set(cursor.roughness)
+        self.eta_i.set(cursor.eta_i)
+        self.eta_t.set(cursor.eta_t)
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
         pass
 
 class Conductor(Bsdf):
@@ -92,14 +89,13 @@ class Conductor(Bsdf):
         self.eta = eta
         self.k = k
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        cursor.id = self.conformance_id
-        self.reflectance.set(cursor.data.reflectance)
-        self.roughness.set(cursor.data.roughness)
-        self.eta.set(cursor.data.eta)
-        self.k.set(cursor.data.k)
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        self.reflectance.set(cursor.reflectance)
+        self.roughness.set(cursor.roughness)
+        self.eta.set(cursor.eta)
+        self.k.set(cursor.k)
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
         pass
 
 core.register_plugin(Diffuse, "bsdfs::Diffuse<float>")

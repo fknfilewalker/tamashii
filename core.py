@@ -251,9 +251,9 @@ def create_or_resize_tensor_typed(device: spy.Device, tensor: spy.Tensor | None,
 
 # Binds a Tensor<T, D> / DiffTensor<T, D> field. Returns the tensor: keep it on the caller,
 # grads attached with .with_grads() survive across uploads because the object is reused.
-def upload_tensor(program: spy.ShaderProgram, cursor: spy.BufferElementCursor, name: str, tensor: spy.Tensor | None, data: npt.NDArray, dtype: str, element_ndim: int = 1) -> spy.Tensor | None:
+def upload_tensor(program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor, name: str, tensor: spy.Tensor | None, data: npt.NDArray, dtype: str, element_ndim: int = 1) -> spy.Tensor | None:
     tensor = create_or_resize_tensor_typed(program.device, tensor, data, dtype, element_ndim=element_ndim)
-    setattr(cursor.data, name, set_tensor(getattr(cursor.data, name), tensor))
+    setattr(cursor, name, set_tensor(getattr(cursor, name), tensor))
     return tensor
 
 def download_tensor(tensor: spy.Tensor | None) -> npt.NDArray | None:
@@ -261,7 +261,7 @@ def download_tensor(tensor: spy.Tensor | None) -> npt.NDArray | None:
 
 # A Transform is the (2,) float4x4 case: [0] = forward, [1] = inverse, read on the GPU with
 # .to_transform(). An unbound tensor downloads as identity, as it reads there.
-def upload_transform(program: spy.ShaderProgram, cursor: spy.BufferElementCursor, name: str, tensor: spy.Tensor | None, matrix: 'spy.float4x4') -> spy.Tensor | None:
+def upload_transform(program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor, name: str, tensor: spy.Tensor | None, matrix: 'spy.float4x4') -> spy.Tensor | None:
     matrices = np.stack([matrix.to_numpy(), spy.math.inverse(matrix).to_numpy()])
     return upload_tensor(program, cursor, name, tensor, matrices, "float4x4", element_ndim=2)
 
@@ -317,12 +317,37 @@ class Interface(ABC):
 
     name: str = ""
 
-    @abstractmethod
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        pass
+    @staticmethod
+    def is_dynamic(cursor: spy.BufferElementCursor | spy.ShaderCursor) -> bool:
+        """Whether the cursor points at a dyn slot, a ConformanceWrapper (types.slang). Cursors don't
+        expose their type, so match its fields in declaration order: _ first, then __, id, ___, data."""
+        def offset(c):  # BufferElementCursor offsets are ints, ShaderCursor ones ShaderOffsets
+            return c._offset if isinstance(c._offset, int) else c._offset.uniform_offset
+        fields = ("_", "__", "id", "___", "data")
+        if not all(cursor.has_field(f) for f in fields):
+            return False
+        offsets = [offset(cursor[f]) for f in fields]
+        return offsets[0] == offset(cursor) and all(a < b for a, b in zip(offsets, offsets[1:]))
+
+    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        """Upload into a dyn slot (ConformanceWrapper: id + data) or a concrete one."""
+        if self.is_dynamic(cursor):
+            cursor.id = self.conformance_id
+            cursor = cursor.data
+        self.write(program, cursor)
 
     @abstractmethod
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        """Write the concrete type's fields."""
+        pass
+
     def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+        """Download from a dyn slot (ConformanceWrapper: id + data) or a concrete one."""
+        self.read(program, cursor.data if self.is_dynamic(cursor) else cursor)
+
+    @abstractmethod
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+        """Read the concrete type's fields."""
         pass
 
 T = TypeVar('T', bound=Interface)
@@ -422,14 +447,14 @@ class Texture(Generic[V]):
         self.factor = factor
         self.image = image
 
-    def set(self, cursor: spy.BufferElementCursor):
+    def set(self, cursor: spy.BufferElementCursor | spy.ShaderCursor):
         cursor.factor = self.factor
         cursor.texture = set_tensor(cursor.texture, self.image.tensor if self.image is not None else None)
 
 def _null_tensor_fields(rank: int) -> dict:
     return {"_data": 0, "_shape": np.zeros(rank, dtype=np.uint32), "_strides": np.ones(rank, dtype=np.int32), "_offset": 0}
 
-def set_tensor(cursor, tensor: spy.Tensor | None):
+def set_tensor(cursor: spy.BufferElementCursor | spy.ShaderCursor, tensor: spy.Tensor | None):
     """Value for assigning a spy.Tensor to a cursor field of Slang type Tensor<T, D>
     or DiffTensor<T, D>. None (and missing gradients) binds null tensors — zero shape,
     null data pointer — so is_valid()/has_grad() are false on the GPU side."""

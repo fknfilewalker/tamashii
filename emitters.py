@@ -126,14 +126,13 @@ class Point(Emitter):
         self.color = color
         self.profile = profile
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        cursor.id = self.conformance_id
-        cursor.data.color = self.color
-        self.profile.set(cursor.data.profile)
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        cursor.color = self.color
+        self.profile.set(cursor.profile)
         self.to_world_tensor = core.upload_transform(program, cursor, "to_world", self.to_world_tensor, self.to_world)
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        self.color = cursor.data.color
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+        self.color = cursor.color
         self.to_world = core.download_transform(self.to_world_tensor)
 
 class Area(Emitter):
@@ -146,12 +145,11 @@ class Area(Emitter):
         self.to_world = spy.math.transpose(to_world)
         self.shape = shape
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        cursor.id = self.conformance_id
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
         self.to_world_tensor = core.upload_transform(program, cursor, "to_world", self.to_world_tensor, self.to_world)
-        cursor.data.shape = self.shape
+        cursor.shape = self.shape
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
         pass
     
 class Constant(Emitter):
@@ -163,12 +161,11 @@ class Constant(Emitter):
         self.to_world = spy.math.transpose(spy.float4x4().identity())
         self.radiance = radiance
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        cursor.id = self.conformance_id
-        self.radiance.set(cursor.data.radiance)
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        self.radiance.set(cursor.radiance)
         self.to_world_tensor = core.upload_transform(program, cursor, "to_world", self.to_world_tensor, self.to_world)
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
         pass
 
 class HosekWilkie(Emitter):
@@ -272,26 +269,25 @@ class HosekWilkie(Emitter):
             float(np.arccos(np.clip(np.dot(model, sun), -1, 1))))
         return self.scale * (spectrum @ hosek_wilkie.rgb_weights())
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        cursor.id = self.conformance_id
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
         self.to_world_tensor = core.upload_transform(program, cursor, "to_world", self.to_world_tensor, self.to_world)
 
         self.data_tensor = core.create_or_resize_tensor_typed(
             program.device, self.data_tensor, self.packed, "float", element_ndim=0)
-        dataset = cursor.data.dataset
+        dataset = cursor.dataset
         dataset.channels = self.layout["channels"]
         dataset.data = core.set_tensor(dataset.data, self.data_tensor)
 
-        cursor.data.sun_direction = self.sun_direction
-        cursor.data.sun_cos_radius = self.sun_cos_radius
+        cursor.sun_direction = self.sun_direction
+        cursor.sun_cos_radius = self.sun_cos_radius
         # the fit is held at sunset, but the disc has genuinely set
         up = self.elevation > 0.0
-        cursor.data.sun_scale = self.sun_scale if up else 0.0
-        cursor.data.sun_select_pdf = self.sun_select_pdf if up and self.sun_scale > 0.0 else 0.0
-        cursor.data.scale = self.scale
+        cursor.sun_scale = self.sun_scale if up else 0.0
+        cursor.sun_select_pdf = self.sun_select_pdf if up and self.sun_scale > 0.0 else 0.0
+        cursor.scale = self.scale
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        self.scale = cursor.data.scale
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+        self.scale = cursor.scale
 
 core.register_plugin(Point, "emitters::Point<float>")
 core.register_plugin(Area, "emitters::Area<float>")

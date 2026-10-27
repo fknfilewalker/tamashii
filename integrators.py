@@ -15,13 +15,12 @@ class Path(Integrator):
         self.rr_depth = rr_depth
         self.emitter_samples = emitter_samples
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        cursor.id = self.conformance_id
-        cursor.data.max_depth = self.max_depth
-        cursor.data.rr_depth = self.rr_depth
-        cursor.data.emitter_samples = self.emitter_samples
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        cursor.max_depth = self.max_depth
+        cursor.rr_depth = self.rr_depth
+        cursor.emitter_samples = self.emitter_samples
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
         pass
 
 # Slang-only integrators with no Python class (ids 1 and 2, after Path).

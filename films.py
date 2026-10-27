@@ -53,11 +53,10 @@ class SphericalHarmonicsFilm(Film):
         self.sh_coefs = (order + 1) ** 2
         self.resize(count)
 
-    def upload(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
-        cursor.id = self.conformance_id
-        cursor.data.sh.coefficients = core.set_tensor(cursor.data.sh.coefficients, self.entries)
+    def write(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor | spy.ShaderCursor):
+        cursor.sh.coefficients = core.set_tensor(cursor.sh.coefficients, self.entries)
 
-    def download(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
+    def read(self, program: spy.ShaderProgram, cursor: spy.BufferElementCursor):
         pass
 
     def clear(self, command_encoder=None):
