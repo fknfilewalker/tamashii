@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     utils = spy.Module.load_from_source(device, "utils", """import tamashii;
         void resolve(inout float4 img, uint count) { img = float4(img.xyz / count, 1.0); }
-        void resolve(in float4 input, in float count, out float4 output) { output = float4(post::tonemap_aces_filmic(post::linear_to_srgb(input / count)).xyz, 1.0); }
+        void resolve(in float4 input, in float count, out float4 output) { output = float4(post::linear_to_srgb(post::tonemap_aces_filmic(input / count)).xyz, 1.0); }
     """)
 
     samples = 0
