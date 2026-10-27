@@ -435,10 +435,10 @@ class ImageResource:
         return ImageResource(tensor)
     
     @staticmethod
-    def from_image(device: spy.Device, path: str, keep_alpha: bool = False) -> 'ImageResource':
-        bitmap = spy.Bitmap(path)
-        if not keep_alpha and bitmap.channel_count == 4:
-            bitmap = bitmap.convert(spy.Bitmap.PixelFormat.rgb, spy.DataStruct.Type.float32, False)
+    def from_image(device: spy.Device, bitmap: spy.Bitmap, keep_alpha: bool = False, raw: bool = False) -> 'ImageResource':
+        # sRGB-encoded (8-bit) images are decoded to linear; raw keeps the stored values (e.g. normal maps)
+        pixel_format = spy.Bitmap.PixelFormat.rgb if not keep_alpha and bitmap.channel_count == 4 else bitmap.pixel_format
+        bitmap = bitmap.convert(pixel_format, spy.DataStruct.Type.float32, bitmap.srgb_gamma and raw)
         return ImageResource.from_numpy(device, np.array(bitmap, copy=False))
     
 V = TypeVar('V')

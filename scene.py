@@ -101,7 +101,9 @@ class Scene():
                         return core.Texture(spy.float3(*[float(x) for x in val.replace(',', ' ').split()]))
                     case 'texture':
                         filename = element.find(".//string[@name='filename']").get('value')
-                        return core.Texture(spy.float3(1), core.ImageResource.from_image(program.device, str(directory / filename)))
+                        raw = element.find(".//boolean[@name='raw']")
+                        raw = raw is not None and raw.get('value', 'false').lower() == 'true'
+                        return core.Texture(spy.float3(1), core.ImageResource.from_image(program.device, spy.Bitmap(str(directory / filename)), raw=raw))
                 return core.Texture(spy.float3(0.5))
 
             def parse_bsdf(element):
@@ -241,13 +243,13 @@ class Scene():
             image_list: list[core.ImageResource] = []
             for image in scene.images:
                 if image.uri is not None:
-                    image_list.append(core.ImageResource.from_image(program.device, str(file.parent / image.uri)))
+                    image_list.append(core.ImageResource.from_image(program.device, spy.Bitmap(str(file.parent / image.uri))))
                 elif image.bufferView is not None:
                     bufferView = scene.bufferViews[image.bufferView]
                     buffer = scene.buffers[bufferView.buffer]
                     data = scene.get_data_from_buffer_uri(buffer.uri)[bufferView.byteOffset:bufferView.byteOffset+bufferView.byteLength]
                     bitmap = spy.Bitmap.load_from_numpy(np.array(np.frombuffer(data, np.uint8)))
-                    image_list.append(core.ImageResource.from_numpy(program.device, np.array(bitmap).astype(np.float32)))
+                    image_list.append(core.ImageResource.from_image(program.device, bitmap))
 
             texture_list = []
             for texture in scene.textures:
