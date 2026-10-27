@@ -5,10 +5,7 @@ if __name__ == "__main__":
     device = spy.create_device(type=tm.vk_or_mtl_device(), enable_debug_layers=False, enable_print=False, enable_compilation_reports=False,
         include_paths=tm.include_paths()
     )
-    pt = tm.renderpasses.PathTracerRayQuery(device, entry_point="primal")
-    pt.settings["mis"] = 1
-    pt.settings["mode"] = 0
-    pt.settings["aov_mode"] = 0
+    pt = tm.renderpasses.PathTracerRayQuery(device, entry_point="primal", integrator=tm.integrators.Path(mis=1))
     
     scene = tm.Scene.cornell_box(pt.program)
     camera = scene.sensors[0]
@@ -54,8 +51,8 @@ if __name__ == "__main__":
                 if (res := imgui.checkbox("Accumulate", accumulate))[0]:
                     accumulate = res[1]
                     pt["seed"] = 1
-                if (res := imgui.checkbox("NEE", pt["nee"]))[0]:
-                    pt["nee"] = res[1]
+                if (res := imgui.checkbox("NEE", pt.integrator.emitter_samples))[0]:
+                    pt.integrator.emitter_samples = res[1]
 
                 imgui.separator()
                 imgui.text("Stats:")

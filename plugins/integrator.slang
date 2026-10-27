@@ -83,7 +83,7 @@ public dyn interface IIntegrator {
 
 namespace integrators {
     [Differentiable]
-    public void sample<T : IIntegrator>(T integrator, uint2 id, IScene scene, inout IRandom rng) {
+    public void sample(IIntegrator integrator, uint2 id, IScene scene, inout IRandom rng) {
         integrator.sample(id, scene, rng);
     }
 }
