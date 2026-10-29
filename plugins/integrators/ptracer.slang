@@ -11,7 +11,7 @@ namespace integrators {
         }
 
         [Differentiable]
-        public void sample(uint2 id, IScene scene, inout IRandom rng) {
+        public void sample(uint2 id, IScene<float> scene, inout IRandom rng) {
             if (scene.emitter_count <= 0) return;
 
             let emitter = scene.emitters[DiscreteDistribution::sample_evenly_spaced_range(0, scene.emitter_count - 1, rng.next_float())];

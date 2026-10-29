@@ -117,7 +117,7 @@ namespace war {
 
     [Differentiable]
     void compute_warped_intersection_direction<uint WarpAuxSampleCount>(
-        no_diff IScene scene,
+        no_diff IScene<float> scene,
         float3 origin,
         no_diff float tmin,
         no_diff float tmax,
@@ -242,7 +242,7 @@ namespace war {
 
     [Differentiable]
     float reparameterize_intersection_ray<uint WarpAuxSampleCount>(
-        no_diff IScene scene,
+        no_diff IScene<float> scene,
         inout Ray<float> ray,
         no_diff float kappa,
         no_diff float2 auxSamples[WarpAuxSampleCount])
@@ -279,7 +279,7 @@ namespace war {
     // The ordinary renderer must remain bit-for-bit unchanged. Slang replaces
     // this empty hook with the differentiable implementation only for AD calls.
     void handle_intersection_discontinuity(
-        no_diff IScene scene,
+        no_diff IScene<float> scene,
         inout RaySample<float> rs,
         no_diff IRandom rng,
         no_diff uint depth,
@@ -288,7 +288,7 @@ namespace war {
 
     [Differentiable, PrimalSubstituteOf(handle_intersection_discontinuity)]
     void sub_handle_intersection_discontinuity(
-        no_diff IScene scene,
+        no_diff IScene<float> scene,
         inout RaySample<float> rs,
         no_diff IRandom rng,
         no_diff uint depth,

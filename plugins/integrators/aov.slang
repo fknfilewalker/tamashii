@@ -18,7 +18,7 @@ namespace integrators {
         }
 
         [TreatAsDifferentiable]
-        public void sample(uint2 id, IScene scene, inout IRandom rng) {
+        public void sample(uint2 id, IScene<float> scene, inout IRandom rng) {
             let camera = (scene.sensors[0] as sensors::Perspective<float>).value;
             if (any(id >= camera.film().shape().xy)) return;
             var rs = camera.sample_ray(rng.next_float2(), Coord(id));

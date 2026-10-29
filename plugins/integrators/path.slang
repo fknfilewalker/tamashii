@@ -15,7 +15,7 @@ namespace integrators {
         }
 
         [Differentiable]
-        public void sample(uint2 id, IScene scene, inout IRandom rng) {
+        public void sample(uint2 id, IScene<float> scene, inout IRandom rng) {
             var spectrum = v3<float>(0);
 
             let sensor = scene.sensors[DiscreteDistribution::sample_evenly_spaced_range(0, scene.sensor_count - 1, rng.next_float())];

@@ -1,31 +1,31 @@
 implementing tamashii;
 
-public interface IScene {
-    public property IShape<float> *shapes;
-    public property IEmitter<float> *emitters;
-    public property ISensor<float> *sensors;
+public interface IScene<Real : atomicable_floating_point> {
+    public property IShape<Real> *shapes;
+    public property IEmitter<Real> *emitters;
+    public property ISensor<Real> *sensors;
     public property RaytracingAccelerationStructure as;
-    public property IEmitter<float> *environment_emitter; // pointer to environment emitter, or null
+    public property IEmitter<Real> *environment_emitter; // pointer to environment emitter, or null
     public property int sensor_count;
     public property int shape_count;
     public property int emitter_count;
 
-    [PreferCheckpoint] public HitInfo intersect(Ray<float> ray, uint32_t flags, uint32_t mask);
-    [PreferCheckpoint] public bool unoccluded(Ray<float> ray);
+    [PreferCheckpoint] public HitInfo intersect(Ray<Real> ray, uint32_t flags, uint32_t mask);
+    [PreferCheckpoint] public bool unoccluded(Ray<Real> ray);
 };
 
-public struct RayQueryScene : IScene {
-    public IShape<float> *shapes;
-    public IEmitter<float> *emitters;
-    public ISensor<float> *sensors;
+public struct RayQueryScene<Real : atomicable_floating_point> : IScene<Real> {
+    public IShape<Real> *shapes;
+    public IEmitter<Real> *emitters;
+    public ISensor<Real> *sensors;
     public RaytracingAccelerationStructure as;
-    public IEmitter<float> *environment_emitter;
+    public IEmitter<Real> *environment_emitter;
     public int sensor_count;
     public int shape_count;
     public int emitter_count;
 
     [require(glsl_hlsl_metal_spirv, rayquery)]
-    public HitInfo intersect(Ray<float> ray, uint32_t flags, uint32_t mask) {
+    public HitInfo intersect(Ray<Real> ray, uint32_t flags, uint32_t mask) {
         HitInfo hit_info = { {}, InstanceIndex(InstanceIndex.miss), {}, {} };
         RayQuery<0> rayQuery;
         rayQuery.TraceRayInline(as, flags, mask, ray.desc());
@@ -45,7 +45,7 @@ public struct RayQueryScene : IScene {
     }
 
     [require(glsl_metal_spirv, rayquery)]
-    public bool unoccluded(Ray<float> ray) {
+    public bool unoccluded(Ray<Real> ray) {
         RayQuery<0> rayQuery;
         rayQuery.TraceRayInline(as, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER, HitMask::all, ray.desc());
         process_hit_candidates(rayQuery);
@@ -62,7 +62,7 @@ public struct RayQueryScene : IScene {
                     rayQuery.CommitNonOpaqueTriangleHit();
                 }
             } else if (rayQuery.CandidateType() == CANDIDATE_PROCEDURAL_PRIMITIVE) {
-                if (this.shapes[rayQuery.CandidateInstanceID()] is shapes::Sphere<float>) {
+                if (this.shapes[rayQuery.CandidateInstanceID()] is shapes::Sphere<Real>) {
                     Tuple<bool, float, v2<float>> hit = shapes::Sphere<float>::intersect_os(rayQuery.CandidateRayObjectRayOrigin(), rayQuery.CandidateRayObjectRayDirection(), rayQuery.RayTMin());
                     if (hit._0 && hit._1 < rayQuery.CommittedRayT()) {
                         attr = hit._2;
@@ -78,12 +78,12 @@ public struct RayQueryScene : IScene {
 
 [anyValueSize(settings::integrator_interface_size)]
 public dyn interface IIntegrator {
-    [Differentiable] public void sample(uint2 id, IScene scene, inout IRandom rng);
+    [Differentiable] public void sample(uint2 id, IScene<float> scene, inout IRandom rng);
 };
 
 namespace integrators {
     [Differentiable]
-    public void sample(IIntegrator integrator, uint2 id, IScene scene, inout IRandom rng) {
+    public void sample(IIntegrator integrator, uint2 id, IScene<float> scene, inout IRandom rng) {
         integrator.sample(id, scene, rng);
     }
 }

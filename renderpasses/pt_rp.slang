@@ -1,22 +1,22 @@
 import tamashii;
 
-struct PipelineScene : IScene {
-    IShape<float> *shapes;
-    IEmitter<float> *emitters;
-    ISensor<float> *sensors;
+struct PipelineScene<Real : atomicable_floating_point> : IScene<Real> {
+    IShape<Real> *shapes;
+    IEmitter<Real> *emitters;
+    ISensor<Real> *sensors;
     RaytracingAccelerationStructure as;
-    IEmitter<float> *environment_emitter;
+    IEmitter<Real> *environment_emitter;
     int sensor_count;
     int shape_count;
     int emitter_count;
 
-    HitInfo intersect(Ray<float> ray, uint32_t flags, uint32_t mask) {
+    HitInfo intersect(Ray<Real> ray, uint32_t flags, uint32_t mask) {
         HitInfo payload = { {}, InstanceIndex(InstanceIndex.miss), {}, {} };
         TraceRay(as, flags, mask, 0, 1, 0, ray.desc(), payload);
         return payload;
     }
 
-    bool unoccluded(Ray<float> ray) {
+    bool unoccluded(Ray<Real> ray) {
         HitInfo payload = { {}, InstanceIndex(0), {}, {} };
         TraceRay(as, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER, HitMask::all, 0, 1, 0, ray.desc(), payload);
         return payload.instance.is_none();
@@ -63,7 +63,7 @@ void sphere_intersection() {
 }
 
 [shader("raygeneration")]
-void primal<I : IIntegrator>(uniform PipelineScene scene, uniform Settings<I> settings) {
+void primal<I : IIntegrator>(uniform PipelineScene<float> scene, uniform Settings<I> settings) {
     uint2 tid = DispatchRaysIndex().xy;
     IRandom rng = random::PCG32(random::TEA::hash(tid.x, tid.y), uint64_t(settings.seed));
     for (int i = 0; i < settings.spp; i++)
@@ -71,7 +71,7 @@ void primal<I : IIntegrator>(uniform PipelineScene scene, uniform Settings<I> se
 }
 
 [shader("raygeneration")]
-void forward<I : IIntegrator>(uniform PipelineScene scene, uniform Settings<I> settings) {
+void forward<I : IIntegrator>(uniform PipelineScene<float> scene, uniform Settings<I> settings) {
     uint2 tid = DispatchRaysIndex().xy;
     IRandom rng = random::PCG32(random::TEA::hash(tid.x, tid.y), uint64_t(settings.seed));
     for (int i = 0; i < settings.spp; i++)
@@ -79,7 +79,7 @@ void forward<I : IIntegrator>(uniform PipelineScene scene, uniform Settings<I> s
 }
 
 [shader("raygeneration")]
-void backward<I : IIntegrator>(uniform PipelineScene scene, uniform Settings<I> settings) {
+void backward<I : IIntegrator>(uniform PipelineScene<float> scene, uniform Settings<I> settings) {
     uint2 tid = DispatchRaysIndex().xy;
     IRandom rng = random::PCG32(random::TEA::hash(tid.x, tid.y), uint64_t(settings.seed));
     for (int i = 0; i < settings.spp; i++)
