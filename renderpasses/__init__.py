@@ -50,3 +50,69 @@ class PathTracerRayQuery(Renderpass):
     def __setitem__(self, key: str, value):
         if key in self.settings:
             self.settings[key] = value
+
+class PathTracerPipeline(Renderpass):
+    def __init__(self, device: spy.Device, entry_point: str = "primal", integrator: integrators.Integrator | None = None):
+        super().__init__()
+        self.device = device
+        self.module = device.compose_modules(
+            name="pt_rp_with_tamashii",
+            modules=[device.load_module("pt_rp.slang"), core.get_composed_module(device)],
+        )
+        self.entry_point_name = entry_point
+        self.programs = {}  # list of integrator types -> (program, pipeline, shader table)
+
+        self.settings = {
+            "seed" : 0,
+            "spp" : 1,
+        }
+        self.integrator = integrator if integrator is not None else integrators.Path()
+
+    def _specialized(self) -> tuple[spy.ShaderProgram, spy.RayTracingPipeline, spy.ShaderTable]:
+        name = self.integrator.implementation_type_name
+        if name not in self.programs:
+            ep_ray_gen = self.module.entry_point(self.entry_point_name).specialize(
+                [spy.SpecializationArg(spy.SpecializationArgKind.type, name)])
+            program = self.device.link_program(
+                modules=[self.module],
+                entry_points=[ep_ray_gen, *(self.module.entry_point(n) for n in
+                    ("miss", "triangle_closest_hit", "sphere_closest_hit", "sphere_intersection"))]
+            )
+            pipeline = self.device.create_ray_tracing_pipeline(
+                program=program,
+                hit_groups=[
+                    spy.HitGroupDesc(hit_group_name="mesh_hit_group", closest_hit_entry_point="triangle_closest_hit"),
+                    spy.HitGroupDesc(hit_group_name="rect_hit_group", closest_hit_entry_point="triangle_closest_hit"),
+                    spy.HitGroupDesc(hit_group_name="sphere_hit_group", closest_hit_entry_point="sphere_closest_hit", intersection_entry_point="sphere_intersection"),
+                ],
+                max_recursion=6,
+                max_ray_payload_size=4*10,
+                max_attribute_size=8,
+            )
+            shader_table = self.device.create_shader_table(
+                program=program,
+                ray_gen_entry_points=[ep_ray_gen.name],
+                miss_entry_points=["miss"],
+                hit_group_names=["mesh_hit_group", "rect_hit_group", "sphere_hit_group"],
+            )
+            self.programs[name] = (program, pipeline, shader_table)
+        return self.programs[name]
+
+    @property
+    def program(self) -> spy.ShaderProgram:
+        return self._specialized()[0]
+
+    def render(self, rt_pass: spy.RayTracingPassEncoder, scene, width, height):
+        program, pipeline, shader_table = self._specialized()
+        entry_point = spy.ShaderCursor(rt_pass.bind_pipeline(pipeline, shader_table)).find_entry_point(0)
+        entry_point["scene"] = scene
+        entry_point["settings"] = self.settings
+        self.integrator.upload(program, entry_point["settings"]["integrator"])
+        rt_pass.dispatch_rays(0, [width, height, 1])
+
+    def __getitem__(self, key: str):
+        return self.settings[key]
+
+    def __setitem__(self, key: str, value):
+        if key in self.settings:
+            self.settings[key] = value
