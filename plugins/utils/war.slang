@@ -10,7 +10,6 @@ namespace war {
         return dotND * dotND;
     }
 
-    [__NoSideEffect, PreferRecompute, ForwardDerivative(fwd_compute_harmonic_weight)]
     float compute_harmonic_weight(
         no_diff SurfaceInteraction<float> si,
         no_diff float3 origin,
@@ -19,7 +18,7 @@ namespace war {
         no_diff float kappa,
         float3 direction)
     {
-        float boundaryTerm = no_diff compute_boundary_term(
+        float boundaryTerm = compute_boundary_term(
             si.sp.frame.normal(), auxDirection);
         float sy = max(1.0f - auxSampleY, 1e-6f);
         float invVMFDensity =
@@ -29,36 +28,6 @@ namespace war {
             weightDenominator > 1e-4f, 1.0f / weightDenominator, 0.0f);
         return invWeightDenominator * invWeightDenominator *
             invWeightDenominator * invVMFDensity;
-    }
-
-    [Differentiable, __NoSideEffect, PreferRecompute]
-    DifferentialPair<float> fwd_compute_harmonic_weight(
-        SurfaceInteraction<float> si,
-        float3 origin,
-        float3 auxDirection,
-        float auxSampleY,
-        float kappa,
-        DifferentialPair<float3> direction)
-    {
-        float boundaryTerm = no_diff compute_boundary_term(
-            si.sp.frame.normal(), auxDirection);
-        float sy = max(1.0f - auxSampleY, 1e-6f);
-        float invVMFDensity =
-            1.0f / ((1.0f - sy) * exp(-2.0f * kappa) + sy);
-        float weightDenominator = invVMFDensity - 1.0f + boundaryTerm;
-        float invWeightDenominator = select(
-            weightDenominator > 1e-4f, 1.0f / weightDenominator, 0.0f);
-        float weight = invWeightDenominator * invWeightDenominator *
-            invWeightDenominator * invVMFDensity;
-
-        float derivativeScale =
-            invVMFDensity * weight * invWeightDenominator * kappa * 3.0f;
-        float3 tangentDerivative =
-            -cross(direction.p, cross(direction.p, direction.d));
-        float weightDerivative =
-            derivativeScale * dot(tangentDerivative, auxDirection);
-        return DifferentialPair<float>(
-            weight, clamp(weightDerivative, -1e10f, 1e10f));
     }
 
     [Differentiable]

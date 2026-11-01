@@ -65,23 +65,28 @@ void sphere_intersection() {
 [shader("raygeneration")]
 void primal<I : IIntegrator>(uniform PipelineScene<float> scene, uniform Settings<I> settings) {
     uint2 tid = DispatchRaysIndex().xy;
-    IRandom rng = random::PCG32(random::TEA::hash(tid.x, tid.y), uint64_t(settings.seed));
-    for (int i = 0; i < settings.spp; i++)
+    for (int i = 0; i < settings.spp; i++) {
+        IRandom rng = random::PCG32(random::TEA::hash(tid.x, tid.y), random::TEA::hash(settings.seed, uint(i)));
         settings.integrator.sample(tid, scene, rng);
+    }
 }
 
 [shader("raygeneration")]
 void forward<I : IIntegrator>(uniform PipelineScene<float> scene, uniform Settings<I> settings) {
     uint2 tid = DispatchRaysIndex().xy;
-    IRandom rng = random::PCG32(random::TEA::hash(tid.x, tid.y), uint64_t(settings.seed));
-    for (int i = 0; i < settings.spp; i++)
+    for (int i = 0; i < settings.spp; i++) {
+        IRandom rng = random::PCG32(random::TEA::hash(tid.x, tid.y), random::TEA::hash(settings.seed, uint(i)));
         __fwd_diff(integrators::sample)(settings.integrator, tid, scene, rng);
+    }
 }
 
 [shader("raygeneration")]
 void backward<I : IIntegrator>(uniform PipelineScene<float> scene, uniform Settings<I> settings) {
     uint2 tid = DispatchRaysIndex().xy;
-    IRandom rng = random::PCG32(random::TEA::hash(tid.x, tid.y), uint64_t(settings.seed));
-    for (int i = 0; i < settings.spp; i++)
+    for (int i = 0; i < settings.spp; i++) {
+        // A fresh stream per sample: __bwd_diff passes a no_diff inout rng as in, so it
+        // would never advance. Seeding all entry points the same way keeps their samples equal.
+        IRandom rng = random::PCG32(random::TEA::hash(tid.x, tid.y), random::TEA::hash(settings.seed, uint(i)));
         __bwd_diff(integrators::sample)(settings.integrator, tid, scene, rng);
+    }
 }
