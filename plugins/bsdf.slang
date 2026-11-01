@@ -17,3 +17,11 @@ public dyn interface IBsdf<Real : floating_point> {
     [Differentiable] public vector<Real, 3> eval(SurfaceInteraction<Real> si, vector<Real, 3> wo);
     [Differentiable] public Real pdf(SurfaceInteraction<Real> si, vector<Real, 3> wo);
 };
+
+// Shading normals make the BSDF non-symmetric. Multiply bsdf eval/sample weights by this when
+// transporting importance (light tracing); 1 for flat shading (Veach 1997, Eq. 5.19)
+[Differentiable]
+public Real shading_normal_correction<Real : floating_point>(SurfaceInteraction<Real> si, vector<Real, 3> wo) {
+    let ng = si.sp.geometric_normal;
+    return safe_div(abs(si.wi.z) * abs(dot(wo, ng)), abs(dot(si.wi, ng)) * abs(wo.z));
+}

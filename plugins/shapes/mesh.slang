@@ -186,11 +186,20 @@ namespace shapes {
             sp.geometric_normal = cross(tri.pos[1] - tri.pos[0], tri.pos[2] - tri.pos[0]);
             sp.area = length(sp.geometric_normal) * Real(0.5);
             let geo_normal = normalize(sp.geometric_normal);
-            // if (has_normals()) {
-            //     sp.frame = Frame<Real>(normalize(mul(interpolate(normals[{indices.x}], normals[{indices.y}], normals[{indices.z}], attribute), transpose(m3x3<Real>(t.inverse)))));
-            // } else
-            sp.frame = Frame<Real>(geo_normal);
-            sp.geometric_normal = v3<Real>(Real(0), Real(0), Real(1));
+            var shading_normal = v3<Real>(Real(0));
+            if (has_normals())
+                shading_normal = mul(interpolate(normals[{indices.x}], normals[{indices.y}], normals[{indices.z}], attribute), transpose(m3x3<Real>(t.inverse)));
+            // degenerate (zero/opposing vertex normals) falls back to flat shading
+            if (dot(shading_normal, shading_normal) > Real(1e-12)) {
+                shading_normal = normalize(shading_normal);
+                // shading normal on the geometric side
+                if (dot(shading_normal, geo_normal) < Real(0)) shading_normal = -shading_normal;
+                sp.frame = Frame<Real>(shading_normal);
+                sp.geometric_normal = sp.frame.to_local(geo_normal);
+            } else {
+                sp.frame = Frame<Real>(geo_normal);
+                sp.geometric_normal = v3<Real>(Real(0), Real(0), Real(1));
+            }
             sp.uv = v2<Real>(Real(0), Real(0));
             if (has_texcoords())
                 sp.uv = interpolate(texcoords_0[{indices.x}], texcoords_0[{indices.y}], texcoords_0[{indices.z}], attribute);
@@ -250,12 +259,12 @@ namespace shapes {
             ds.distance = length(ds.direction);
             ds.direction /= ds.distance;
             ds.delta = false;
-            ds.pdf = warp::area_to_solid_angle(Real(primitive_count()) * ds.sp.area, ds.distance, dot(-ds.direction, ds.sp.frame.normal()));
+            ds.pdf = warp::area_to_solid_angle(Real(primitive_count()) * ds.sp.area, ds.distance, dot(-ds.direction, ds.sp.frame.to_world(ds.sp.geometric_normal)));
             return ds;
         }
 
         [Differentiable] public Real pdf_direction(SurfaceInteraction<Real> si, DirectionSample<Real> ds) {
-            return warp::area_to_solid_angle(Real(primitive_count()) * ds.sp.area, ds.distance, dot(-ds.direction, ds.sp.frame.normal()));
+            return warp::area_to_solid_angle(Real(primitive_count()) * ds.sp.area, ds.distance, dot(-ds.direction, ds.sp.frame.to_world(ds.sp.geometric_normal)));
         }
 
         public EdgeSamplePixel<Real> sample_confined_edge(uint32_t primitive, v2<Real> attribute, ISensor<Real> *_sensor, experiment::AABB2D<Real> pixel_aabb_uv, v2<Real> sample, Transform<Real> transform) {

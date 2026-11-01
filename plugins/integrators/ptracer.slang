@@ -58,7 +58,7 @@ namespace integrators {
                             let sensor_jacobian = abs(sensor_direction_local.z) * ls.weight;
                             let measure_jacobian = safe_div(light_jacobian, sensor_jacobian);
                             let reparam_weight = safe_div(measure_jacobian, detach(measure_jacobian));
-                            let brdf = shape.bsdf->eval(sensor_si, sensor_direction_local);
+                            let brdf = shape.bsdf->eval(sensor_si, sensor_direction_local) * shading_normal_correction(sensor_si, sensor_direction_local);
                             sensor.film().atomic_add(v4<float>(rs.weight * brdf * ls.weight * reparam_weight, 1.0f), ls.coords);
                         }
                     }
@@ -72,7 +72,7 @@ namespace integrators {
                 }
 
                 let sample = shape.bsdf->sample(si, rng.next_float3());
-                rs.weight *= sample.weight;
+                rs.weight *= sample.weight * shading_normal_correction(si, sample.wo);
 
                 rs.ray.origin = si.sp.position;
                 rs.ray.direction = si.sp.frame.to_world(sample.wo);
