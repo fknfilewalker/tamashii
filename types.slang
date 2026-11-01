@@ -526,7 +526,7 @@ public Transform<T> operator*<T : floating_point>(Transform<T> left, Transform<T
 public extension<Real : atomicable_floating_point> DiffTensor<m4x4<Real>, 1>
     where m4x4<Real> : IAtomicAccumulable
 {
-    [Differentiable]
+    [Differentiable, PreferRecompute]
     public Transform<Real> to_transform() {
         if (!is_valid()) return Transform<Real>::identity();
         return Transform<Real>(load({0}), load({1}));

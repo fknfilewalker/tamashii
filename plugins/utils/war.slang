@@ -286,7 +286,7 @@ namespace war {
         no_diff bool rayDelta)
     {}
 
-    [Differentiable, PrimalSubstituteOf(handle_intersection_discontinuity)]
+    [Differentiable, PreferRecompute(SideEffectBehavior.Allow), PrimalSubstituteOf(handle_intersection_discontinuity)]
     void sub_handle_intersection_discontinuity(
         no_diff IScene<float> scene,
         inout RaySample<float> rs,

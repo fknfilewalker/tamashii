@@ -155,7 +155,7 @@ namespace shapes {
             return { indices[i], indices[(i + 1) % 3] };
         }
 
-        [Differentiable]
+        [Differentiable, PreferRecompute]
         public Triangle<Real> get_triangle(uint3 indices, Transform<Real> transform = Transform<Real>::identity()) {
             Triangle<Real> tri;
             tri.pos[0] = mul(v4<Real>(positions[{indices.x}], Real(1)), transform.forward).xyz;
@@ -176,7 +176,7 @@ namespace shapes {
             return fma(v0, b.x, fma(v1, b.y, v2 * b.z));
         }
 
-        [Differentiable]
+        [Differentiable, PreferRecompute]
         public SurfacePoint<Real> surface_point(uint32_t primitive, v2<Real> attribute, Transform<Real> transform) {
             uint3 indices = get_indices(primitive);
             Transform<Real> t = to_world.to_transform() * transform;
@@ -200,7 +200,7 @@ namespace shapes {
             return sp;
         }
 
-        [Differentiable] public SurfaceInteraction<Real> _surface_interaction(Ray<Real> ray, uint32_t primitive, v2<Real> attribute, Transform<Real> transform = Transform<Real>::identity()) {
+        [Differentiable, PreferRecompute] public SurfaceInteraction<Real> _surface_interaction(Ray<Real> ray, uint32_t primitive, v2<Real> attribute, Transform<Real> transform = Transform<Real>::identity()) {
             var sp = surface_point(primitive, attribute, transform);
             let geo_normal_world = sp.frame.to_world(sp.geometric_normal);
             if (dot(ray.direction, geo_normal_world) > Real(0)) {

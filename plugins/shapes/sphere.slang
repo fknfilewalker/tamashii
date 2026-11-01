@@ -18,7 +18,7 @@ namespace shapes {
 
         public uint primitive_count() { return 1; }
 
-        [Differentiable] public SurfacePoint<Real> surface_point(uint32_t primitive, v2<Real> attribute, Transform<Real> transform) {
+        [Differentiable, PreferRecompute] public SurfacePoint<Real> surface_point(uint32_t primitive, v2<Real> attribute, Transform<Real> transform) {
             var _transform = mul(to_world.to_transform().forward, transform.forward);
             let _radius = _transform[0][0] * Real(0.5);
             SurfacePoint<Real> sp;
@@ -35,7 +35,7 @@ namespace shapes {
             return sp;
         }
 
-        [Differentiable] public SurfaceInteraction<Real> _surface_interaction(Ray<Real> ray, uint32_t primitive, v2<Real> attribute, Transform<Real> transform = Transform<Real>::identity()) {
+        [Differentiable, PreferRecompute] public SurfaceInteraction<Real> _surface_interaction(Ray<Real> ray, uint32_t primitive, v2<Real> attribute, Transform<Real> transform = Transform<Real>::identity()) {
             SurfaceInteraction<Real> si;
             si.sp = surface_point(primitive, attribute, transform);
             let geo_normal_world = si.sp.frame.to_world(si.sp.geometric_normal);
