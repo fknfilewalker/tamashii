@@ -11,12 +11,21 @@ public struct BsdfSample<Real : floating_point> : IDifferentiable {
 // in z frame
 [anyValueSize(settings::bsdf_interface_size)]
 public dyn interface IBsdf<Real : floating_point> {
-    [Differentiable] public vector<Real, 3> get_reflectance(SurfaceInteraction<Real> si);
+    [Differentiable] public Real3 get_reflectance(SurfaceInteraction<Real> si);
 
-    [Differentiable] public BsdfSample<Real> sample(SurfaceInteraction<Real> si, no_diff vector<Real, 3> uvw);
-    [Differentiable] public vector<Real, 3> eval(SurfaceInteraction<Real> si, vector<Real, 3> wo);
-    [Differentiable] public Real pdf(SurfaceInteraction<Real> si, vector<Real, 3> wo);
+    [Differentiable] public BsdfSample<Real> sample(SurfaceInteraction<Real> si, no_diff Real3 uvw);
+    [Differentiable] public Real3 eval(SurfaceInteraction<Real> si, Real3 wo);
+    [Differentiable] public Real pdf(SurfaceInteraction<Real> si, Real3 wo);
 };
+
+extension<Real, T> T
+where Real : __BuiltinFloatingPointType
+where T : IBsdf<Real>
+{
+    typealias Real2 = vector<Real, 2>;
+    typealias Real3 = vector<Real, 3>;
+    typealias Real4 = vector<Real, 4>;
+}
 
 // Shading normals make the BSDF non-symmetric. Multiply bsdf eval/sample weights by this when
 // transporting importance (light tracing); 1 for flat shading (Veach 1997, Eq. 5.19)

@@ -82,18 +82,14 @@ namespace shapes {
     };
 
     public struct Mesh<Real : atomicable_floating_point> : IShape<Real>, IDifferentiable {
-        typealias Real2 = vector<Real, 2>;
-        typealias Real3 = vector<Real, 3>;
-        typealias Real4 = vector<Real, 4>;
-
         public no_diff DiffTensor<m4x4<Real>, 1> to_world;
         public AABB<Real> aabb;
         public Ptr<IBsdf<Real>> bsdf;
         public IFilm<Real, 4>* film;
-        public v3<Real> emission;
-        public no_diff DiffTensor<v3<Real>, 1> positions;
-        public no_diff Tensor<v3<Real>, 1> normals;
-        public no_diff Tensor<v2<Real>, 1> texcoords_0;
+        public Real3 emission;
+        public no_diff DiffTensor<Real3, 1> positions;
+        public no_diff Tensor<Real3, 1> normals;
+        public no_diff Tensor<Real2, 1> texcoords_0;
         public no_diff Tensor<Real, 1> barycentric_areas;
         public no_diff Tensor<uint3, 1> indices;   // one uint3 element per triangle
         public no_diff Tensor<int3, 1> neighbors;  // one int3 element per triangle, -1 = no neighbor
@@ -102,14 +98,14 @@ namespace shapes {
             this.to_world = DiffTensor<m4x4<Real>, 1>();
             this.bsdf = nullptr;
             this.film = nullptr;
-            this.emission = v3<Real>(Real(0), Real(0), Real(0));
-            this.positions = DiffTensor<v3<Real>, 1>();
-            this.normals = Tensor<v3<Real>, 1>();
-            this.texcoords_0 = Tensor<v2<Real>, 1>();
+            this.emission = Real3(Real(0), Real(0), Real(0));
+            this.positions = DiffTensor<Real3, 1>();
+            this.normals = Tensor<Real3, 1>();
+            this.texcoords_0 = Tensor<Real2, 1>();
             this.barycentric_areas = Tensor<Real, 1>();
             this.indices = Tensor<uint3, 1>();
             this.neighbors = Tensor<int3, 1>();
-            this.aabb = AABB<Real>(v3<Real>(Real(0)), v3<Real>(Real(0)));
+            this.aabb = AABB<Real>(Real3(Real(0)), Real3(Real(0)));
         }
 
         public uint primitive_count() { return triangle_count(); }
@@ -127,7 +123,7 @@ namespace shapes {
         public bool has_dpositions() { return positions.has_grad(); }
 
         // returns for each edge whether there is a discontinuity (neighboring triangle is facing different direction)
-        public bool3 has_discontinuity(uint primitive, v3<Real> ray_dir) {
+        public bool3 has_discontinuity(uint primitive, Real3 ray_dir) {
             if (!has_dpositions()) return bool3(false);
             bool3 result = bool3(true);
             if (!has_neighbors()) return result;
@@ -136,7 +132,7 @@ namespace shapes {
             for (int i = 0; i < 3; i++) {
                 if (n[i] >= 0) {
                     var tri = get_triangle(get_indices(uint(n[i])), to_world.to_transform());
-                    v3<Real> geo_normal = normalize(cross(tri.pos[1] - tri.pos[0], tri.pos[2] - tri.pos[0]));
+                    Real3 geo_normal = normalize(cross(tri.pos[1] - tri.pos[0], tri.pos[2] - tri.pos[0]));
                     result[i] = dot(geo_normal, ray_dir) < Real(0);
                 }
             }
@@ -158,9 +154,9 @@ namespace shapes {
         [Differentiable, PreferRecompute]
         public Triangle<Real> get_triangle(uint3 indices, Transform<Real> transform = Transform<Real>::identity()) {
             Triangle<Real> tri;
-            tri.pos[0] = mul(v4<Real>(positions[{indices.x}], Real(1)), transform.forward).xyz;
-            tri.pos[1] = mul(v4<Real>(positions[{indices.y}], Real(1)), transform.forward).xyz;
-            tri.pos[2] = mul(v4<Real>(positions[{indices.z}], Real(1)), transform.forward).xyz;
+            tri.pos[0] = mul(Real4(positions[{indices.x}], Real(1)), transform.forward).xyz;
+            tri.pos[1] = mul(Real4(positions[{indices.y}], Real(1)), transform.forward).xyz;
+            tri.pos[2] = mul(Real4(positions[{indices.z}], Real(1)), transform.forward).xyz;
             return tri;
         }
 
@@ -177,7 +173,7 @@ namespace shapes {
         }
 
         [Differentiable, PreferRecompute]
-        public SurfacePoint<Real> surface_point(uint32_t primitive, v2<Real> attribute, Transform<Real> transform) {
+        public SurfacePoint<Real> surface_point(uint32_t primitive, Real2 attribute, Transform<Real> transform) {
             uint3 indices = get_indices(primitive);
             Transform<Real> t = to_world.to_transform() * transform;
             var tri = get_triangle(indices, t);
@@ -186,7 +182,7 @@ namespace shapes {
             sp.geometric_normal = cross(tri.pos[1] - tri.pos[0], tri.pos[2] - tri.pos[0]);
             sp.area = length(sp.geometric_normal) * Real(0.5);
             let geo_normal = normalize(sp.geometric_normal);
-            var shading_normal = v3<Real>(Real(0));
+            var shading_normal = Real3(Real(0));
             if (has_normals())
                 shading_normal = mul(interpolate(normals[{indices.x}], normals[{indices.y}], normals[{indices.z}], attribute), transpose(m3x3<Real>(t.inverse)));
             // degenerate (zero/opposing vertex normals) falls back to flat shading
@@ -198,9 +194,9 @@ namespace shapes {
                 sp.geometric_normal = sp.frame.to_local(geo_normal);
             } else {
                 sp.frame = Frame<Real>(geo_normal);
-                sp.geometric_normal = v3<Real>(Real(0), Real(0), Real(1));
+                sp.geometric_normal = Real3(Real(0), Real(0), Real(1));
             }
-            sp.uv = v2<Real>(Real(0), Real(0));
+            sp.uv = Real2(Real(0), Real(0));
             if (has_texcoords())
                 sp.uv = interpolate(texcoords_0[{indices.x}], texcoords_0[{indices.y}], texcoords_0[{indices.z}], attribute);
             sp.emission = emission;
@@ -209,7 +205,7 @@ namespace shapes {
             return sp;
         }
 
-        [Differentiable, PreferRecompute] public SurfaceInteraction<Real> _surface_interaction(Ray<Real> ray, uint32_t primitive, v2<Real> attribute, Transform<Real> transform = Transform<Real>::identity()) {
+        [Differentiable, PreferRecompute] public SurfaceInteraction<Real> _surface_interaction(Ray<Real> ray, uint32_t primitive, Real2 attribute, Transform<Real> transform = Transform<Real>::identity()) {
             var sp = surface_point(primitive, attribute, transform);
             let geo_normal_world = sp.frame.to_world(sp.geometric_normal);
             if (dot(ray.direction, geo_normal_world) > Real(0)) {
@@ -222,11 +218,11 @@ namespace shapes {
             return si;
         }
 
-        public SurfaceInteraction<Real> surface_interaction(Ray<Real> ray, uint32_t primitive, no_diff v2<Real> attribute, bool attach_to_geometry = false, Transform<Real> transform = Transform<Real>::identity()) {
+        public SurfaceInteraction<Real> surface_interaction(Ray<Real> ray, uint32_t primitive, no_diff Real2 attribute, bool attach_to_geometry = false, Transform<Real> transform = Transform<Real>::identity()) {
             return _surface_interaction(ray, primitive, attribute, transform);
         }
 
-        [Differentiable, PrimalSubstituteOf(surface_interaction)] public SurfaceInteraction<Real> sub_surface_interaction(Ray<Real> ray, uint32_t primitive, no_diff v2<Real> attribute, bool attach_to_geometry = false, Transform<Real> transform = Transform<Real>::identity()) {
+        [Differentiable, PrimalSubstituteOf(surface_interaction)] public SurfaceInteraction<Real> sub_surface_interaction(Ray<Real> ray, uint32_t primitive, no_diff Real2 attribute, bool attach_to_geometry = false, Transform<Real> transform = Transform<Real>::identity()) {
             return surface_intersection(ray, primitive, attach_to_geometry, transform);
         }
 
@@ -234,7 +230,7 @@ namespace shapes {
         public SurfaceInteraction<Real> surface_intersection(Ray<Real> ray, uint32_t primitive, bool attach_to_geometry, Transform<Real> transform = Transform<Real>::identity()) {
             uint3 indices = get_indices(primitive);
             var tri = get_triangle(indices, to_world.to_transform());
-            v3<Real> v[3] = { tri.pos[0], tri.pos[1], tri.pos[2] };
+            Real3 v[3] = { tri.pos[0], tri.pos[1], tri.pos[2] };
             let t = compute_ray_distance_to_triangle(v, ray.origin, ray.direction);
             let bary = compute_barycentrics(v, ray.origin + ray.direction * t);
             var attribute = bary_to_attr(bary);
@@ -242,7 +238,7 @@ namespace shapes {
             return _surface_interaction(ray, primitive, attribute, transform);
         }
 
-        [Differentiable] public SurfaceSample<Real> sample_surface(v3<Real> uv, Transform<Real> transform) {
+        [Differentiable] public SurfaceSample<Real> sample_surface(Real3 uv, Transform<Real> transform) {
             let tri_idx = DiscreteDistribution::sample_evenly_spaced_range(0u, triangle_count() - 1u, uv.x);
             SurfaceSample<Real> ss;
             ss.sp = surface_point(tri_idx, warp::square_to_uniform_triangle(uv.yz), transform);
@@ -251,7 +247,7 @@ namespace shapes {
             return ss;
         }
 
-        [Differentiable] public DirectionSample<Real> sample_direction(SurfaceInteraction<Real> si, v3<Real> uv, Transform<Real> transform) {
+        [Differentiable] public DirectionSample<Real> sample_direction(SurfaceInteraction<Real> si, Real3 uv, Transform<Real> transform) {
             let tri_idx = DiscreteDistribution::sample_evenly_spaced_range(0u, triangle_count() - 1u, uv.x);
             DirectionSample<Real> ds;
             ds.sp = surface_point(tri_idx, warp::square_to_uniform_triangle(uv.yz), transform);
@@ -267,10 +263,10 @@ namespace shapes {
             return warp::area_to_solid_angle(Real(primitive_count()) * ds.sp.area, ds.distance, dot(-ds.direction, ds.sp.frame.to_world(ds.sp.geometric_normal)));
         }
 
-        public EdgeSamplePixel<Real> sample_confined_edge(uint32_t primitive, v2<Real> attribute, ISensor<Real> *_sensor, experiment::AABB2D<Real> pixel_aabb_uv, v2<Real> sample, Transform<Real> transform) {
+        public EdgeSamplePixel<Real> sample_confined_edge(uint32_t primitive, Real2 attribute, ISensor<Real> *_sensor, experiment::AABB2D<Real> pixel_aabb_uv, Real2 sample, Transform<Real> transform) {
             uint3 indices = get_indices(primitive);
             var tri = get_triangle(indices, to_world.to_transform());
-            v3<Real> hp = interpolate(tri.pos[0], tri.pos[1], tri.pos[2], attribute);
+            Real3 hp = interpolate(tri.pos[0], tri.pos[1], tri.pos[2], attribute);
             var geo_normal = normalize(cross(tri.pos[1] - tri.pos[0], tri.pos[2] - tri.pos[0]));
 
             bool flip = dot(geo_normal, _sensor->sample_lens({{hp}, {}}, {}).direction) < Real(0);
@@ -282,12 +278,12 @@ namespace shapes {
             pixel_aabb_ndc.max = pixel_aabb_uv.max * Real(2) - Real(1);
 
             // transform triangle to ndc space
-            v4<Real> v0_cs = _sensor->splat(v4<Real>(tri.pos[0], Real(1)));
-            v4<Real> v1_cs = _sensor->splat(v4<Real>(tri.pos[1], Real(1)));
-            v4<Real> v2_cs = _sensor->splat(v4<Real>(tri.pos[2], Real(1)));
-            v3<Real> v0_ndc = v0_cs.xyz / v0_cs.w; // v0_ndc.y = -v0_ndc.y;
-            v3<Real> v1_ndc = v1_cs.xyz / v1_cs.w; // v1_ndc.y = -v1_ndc.y;
-            v3<Real> v2_ndc = v2_cs.xyz / v2_cs.w; // v2_ndc.y = -v2_ndc.y;
+            Real4 v0_cs = _sensor->splat(Real4(tri.pos[0], Real(1)));
+            Real4 v1_cs = _sensor->splat(Real4(tri.pos[1], Real(1)));
+            Real4 v2_cs = _sensor->splat(Real4(tri.pos[2], Real(1)));
+            Real3 v0_ndc = v0_cs.xyz / v0_cs.w; // v0_ndc.y = -v0_ndc.y;
+            Real3 v1_ndc = v1_cs.xyz / v1_cs.w; // v1_ndc.y = -v1_ndc.y;
+            Real3 v2_ndc = v2_cs.xyz / v2_cs.w; // v2_ndc.y = -v2_ndc.y;
             // clip against pixel
             experiment::Triangle2D<Real> t2d = experiment::Triangle2D<Real>( { v0_ndc.xy, v1_ndc.xy, v2_ndc.xy });
             var clipped = t2d.clip(pixel_aabb_ndc);
@@ -298,8 +294,8 @@ namespace shapes {
             // https://en.wikipedia.org/wiki/Shoelace_formula
             Real area = Real(0);
             for (int i = 0; i < clipped._1; i++) {
-                v2<Real> a = clipped._0[i % clipped._1];
-                v2<Real> b = clipped._0[(i + 1) % clipped._1];
+                Real2 a = clipped._0[i % clipped._1];
+                Real2 b = clipped._0[(i + 1) % clipped._1];
                 area += (a.y + b.y) * (a.x - b.x); // Trapezoid formula
                 // area += (a.x * b.y - a.y * b.x); // Triangle formula
             }
@@ -350,7 +346,7 @@ namespace shapes {
             if (flip) ndc_edge_normal_n = -ndc_edge_normal_n;
 
             // sample point on edge, find in/out points
-            v2<Real> point = intersected._1[edge_idx].interpolate(t);
+            Real2 point = intersected._1[edge_idx].interpolate(t);
             var epsilon = Real(1e-5);
             var point_in = point + ndc_edge_normal_n * epsilon;
             var point_out = point - ndc_edge_normal_n * epsilon;
@@ -360,20 +356,20 @@ namespace shapes {
             var ray_b = _sensor->sample_ray(intersected._1[edge_idx].B * Real(0.5) + Real(0.5)).ray;
             var ray_p = _sensor->sample_ray(point * Real(0.5) + Real(0.5)).ray;
             experiment::Plane<Real> plane = experiment::Plane<Real>(hp, geo_normal);
-            v3<Real> hit_a = plane.intersect(ray_a);
-            v3<Real> hit_b = plane.intersect(ray_b);
-            v3<Real> hit_p = plane.intersect(ray_p);
+            Real3 hit_a = plane.intersect(ray_a);
+            Real3 hit_b = plane.intersect(ray_b);
+            Real3 hit_p = plane.intersect(ray_p);
 
             Real orig_a_to_p = length(hit_p - orig_edge.pos[0]);
             Real orig_a_to_b = length(orig_edge.direction());
             Real orig_t_ws = orig_a_to_p / orig_a_to_b;
-            v2<Real> ndc_pixel_dims = abs(pixel_aabb_ndc.max - pixel_aabb_ndc.min);
-            v2<Real> normalized_edge_length = length(ndc_edge_dir / ndc_pixel_dims);
+            Real2 ndc_pixel_dims = abs(pixel_aabb_ndc.max - pixel_aabb_ndc.min);
+            Real2 normalized_edge_length = length(ndc_edge_dir / ndc_pixel_dims);
             EdgeSamplePixel<Real> es;
             es.pos_in_uv = point_in * Real(0.5) + Real(0.5);   // for sensor.sample_ray(..., pos_in_uv)
             es.pos_out_uv = point_out * Real(0.5) + Real(0.5); // for sensor.sample_ray(..., pos_out_uv)
             es.t = orig_t_ws;
-            es.barycentric = v3<Real>(Real(0));
+            es.barycentric = Real3(Real(0));
             es.barycentric[edge_idx] = Real(1) - es.t;
             es.barycentric[(edge_idx + 1) % 3] = es.t;
             es.attribute = bary_to_attr(es.barycentric);
@@ -387,7 +383,7 @@ namespace shapes {
         }
    
         [Differentiable]
-        static v3<Real> slerp_sample(v3<Real> a, v3<Real> b, vector<Real, 1> t) {
+        static Real3 slerp_sample(Real3 a, Real3 b, vector<Real, 1> t) {
             Real cos_theta = dot(a, b);
             if (cos_theta > Real(0.9995)) {
                 return normalize(a + t[0] * (b - a));
@@ -400,16 +396,16 @@ namespace shapes {
         }
 
         [Differentiable]
-        static Real spherical_arc(v3<Real> e0, v3<Real> e1, v3<Real> origin, Real radius = Real(1)) {
-            v3<Real> da = e0 - origin;
-            v3<Real> db = e1 - origin;
+        static Real spherical_arc(Real3 e0, Real3 e1, Real3 origin, Real radius = Real(1)) {
+            Real3 da = e0 - origin;
+            Real3 db = e1 - origin;
             Real la = length(da);
             Real lb = length(db);
             if (la < Real(1e-8) || lb < Real(1e-8)) return Real(0);
             return radius * acos(clamp(dot(da / la, db / lb), Real(-1), Real(1)));
         }
 
-        public EdgeSampleHemisphere<Real> sample_confined_edge(uint32_t primitive, experiment::Hemisphere<Real> hemisphere, v2<Real> sample, Transform<Real> transform) {
+        public EdgeSampleHemisphere<Real> sample_confined_edge(uint32_t primitive, experiment::Hemisphere<Real> hemisphere, Real2 sample, Transform<Real> transform) {
             const uint3 indices = get_indices(primitive);
             // Unit sphere. Arc lengths and the solid angle returned by clip_solid_angle_area() must
             // live in the same measure, otherwise es.length / es.area disagree by a constant factor.
@@ -422,7 +418,7 @@ namespace shapes {
                 // geo_normal = -geo_normal;
             }
             var clipped_edge = hemisphere.clip_edges(tri.pos);
-            v3<Real> arcs;
+            Real3 arcs;
             for (uint i = 0; i < 3; i++) arcs[i] = spherical_arc(clipped_edge._1[i].A, clipped_edge._1[i].B, hemisphere.center, _r);
             const Real clipped_spherical_area = hemisphere.clip_solid_angle_area(tri.pos);
             // if (clipped_spherical_area <= 0.0f) {
@@ -441,7 +437,7 @@ namespace shapes {
             //     normalize(tri.pos[2] - hemisphere.center)
             // );
 
-            v3<Real> lengths_ws;
+            Real3 lengths_ws;
             for (int i = 0; i < 3; i++) {
                 lengths_ws[i] = length(tri.edge(i).direction());
             }
@@ -489,13 +485,13 @@ namespace shapes {
             {
                 var ldir = c_edge_ws.B - c_edge_ws.A;
                 var llength = length(ldir);
-                v3<Real> da = c_edge_ws.A - hemisphere.center;
-                v3<Real> db = c_edge_ws.B - hemisphere.center;
+                Real3 da = c_edge_ws.A - hemisphere.center;
+                Real3 db = c_edge_ws.B - hemisphere.center;
                 Real la = length(da);
                 Real lb = length(db);
                 if (la < Real(1e-8) || lb < Real(1e-8)) return {};
-                v3<Real> a = da / la;
-                v3<Real> b = db / lb;
+                Real3 a = da / la;
+                Real3 b = db / lb;
                 Real theta = acos(clamp(dot(a, b), Real(-1), Real(1)));
 
                 bool use_psa = llength > Real(1e-8) && theta > Real(1e-8);
@@ -528,8 +524,8 @@ namespace shapes {
             }
 
             let pair_cart = __fwd_diff(slerp_sample)(
-                diffPair<v3<Real>>(normalize(c_edge_ws.A - hemisphere.center), v3<Real>(Real(0))),
-                diffPair<v3<Real>>(normalize(c_edge_ws.B - hemisphere.center), v3<Real>(Real(0))),
+                diffPair<Real3>(normalize(c_edge_ws.A - hemisphere.center), Real3(Real(0))),
+                diffPair<Real3>(normalize(c_edge_ws.B - hemisphere.center), Real3(Real(0))),
                 diffPair<vector<Real, 1>>(t, vector<Real, 1>(1))
             );
             es.position = experiment::Plane<Real>(tri.pos[0], geo_normal).intersect(Ray<Real>(hemisphere.center, Real(0.01), normalize(pair_cart.p), Real(10000.0)));
@@ -537,7 +533,7 @@ namespace shapes {
             es.normal = normalize(cross(normalize(pair_cart.p), normalize(pair_cart.d) /*tangent*/));
             if (flip) es.normal = -es.normal;
 
-            es.barycentric = v3<Real>(Real(0));
+            es.barycentric = Real3(Real(0));
             es.barycentric[edge_idx] = Real(1) - es.t;
             es.barycentric[(edge_idx + 1) % 3] = es.t;
             es.attribute = bary_to_attr(es.barycentric);
@@ -554,11 +550,11 @@ namespace shapes {
             return es;     
         }
 
-        [Differentiable] public void store(vector<Real, 4> value, Ray<Real> ray, uint32_t primitive, v2<Real> attribute, Transform<Real> transform = Transform<Real>::identity()) {
+        [Differentiable] public void store(Real4 value, Ray<Real> ray, uint32_t primitive, Real2 attribute, Transform<Real> transform = Transform<Real>::identity()) {
             if (film) {
                 let indices = get_indices(primitive);
                 let bary = attr_to_bary(attribute);
-                let areas = v3<Real>(barycentric_areas[{indices.x}], barycentric_areas[{indices.y}], barycentric_areas[{indices.z}]);
+                let areas = Real3(barycentric_areas[{indices.x}], barycentric_areas[{indices.y}], barycentric_areas[{indices.z}]);
                 film.interpolate_add<3>(value,
                     { { indices.x, 0, 0, 0 }, { indices.y, 0, 0, 0 } , { indices.z, 0, 0, 0 } },
                     { { bary.x / areas.x }, { bary.y / areas.y } , { bary.z / areas.z } },
@@ -567,7 +563,7 @@ namespace shapes {
             }
         }
 
-        [Differentiable] public vector<Real, 4> load(Ray<Real> ray, uint32_t primitive, v2<Real> attribute, Transform<Real> transform = Transform<Real>::identity()) {
+        [Differentiable] public Real4 load(Ray<Real> ray, uint32_t primitive, Real2 attribute, Transform<Real> transform = Transform<Real>::identity()) {
             if (film) {
                 let indices = get_indices(primitive);
                 let bary = attr_to_bary(attribute);
@@ -578,11 +574,11 @@ namespace shapes {
                     _surface_interaction(ray, primitive, detach(attribute), transform)
                 );
             }
-            return vector<Real, 4>(Real(0), Real(0), Real(0), Real(0));
+            return Real4(Real(0), Real(0), Real(0), Real(0));
         }
 
         public uint intersect(inout Ray<Real> ray, const uint cullmode,
-                           inout v2<Real> barycentric, inout uint primitive_idx, inout uint geometry_idx) {
+                           inout Real2 barycentric, inout uint primitive_idx, inout uint geometry_idx) {
             bool hit = false;
             var _ray_os = ray.transform(to_world.to_transform().inverse);
             for (uint i = 0; i < triangle_count(); i++) {

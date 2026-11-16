@@ -10,7 +10,7 @@ namespace emitters {
     public struct HosekWilkie<Real : atomicable_floating_point> : IEmitter<Real>, IDifferentiable {
         public no_diff DiffTensor<m4x4<Real>, 1> to_world;
         public no_diff hosek_wilkie::Dataset dataset;
-        public no_diff v3<Real> sun_direction;  // world space, normalized
+        public no_diff Real3 sun_direction;  // world space, normalized
         public no_diff Real sun_cos_radius;     // cosine of the disc's angular radius
         public no_diff Real sun_select_pdf;     // probability of sampling the disc
         public no_diff Real sun_scale;          // disc brightness; zero switches it off
@@ -19,7 +19,7 @@ namespace emitters {
         public __init() {
             this.to_world = DiffTensor<m4x4<Real>, 1>();
             this.dataset = hosek_wilkie::Dataset();
-            this.sun_direction = v3<Real>(Real(0), Real(1), Real(0));
+            this.sun_direction = Real3(Real(0), Real(1), Real(0));
             this.sun_cos_radius = Real(0.99999010);  // cos(0.51 degrees / 2)
             this.sun_select_pdf = Real(0.5);
             this.sun_scale = Real(1);
@@ -31,49 +31,49 @@ namespace emitters {
         }
 
         /* World direction into the sky's frame, still Y-up. */
-        public v3<Real> to_local_direction(v3<Real> direction) {
-            return normalize(mul(v4<Real>(direction, Real(0.0)), to_world.to_transform().inverse).xyz);
+        public Real3 to_local_direction(Real3 direction) {
+            return normalize(mul(Real4(direction, Real(0.0)), to_world.to_transform().inverse).xyz);
         }
 
         /* Sky radiance, without the solar disc. */
         [Differentiable]
-        public v3<Real> sky(no_diff v3<Real> direction) {
+        public Real3 sky(no_diff Real3 direction) {
             let model = no_diff v3<float>(hosek_wilkie::to_model<Real>(no_diff to_local_direction(direction)));
-            return scale * v3<Real>(no_diff hosek_wilkie::sky_radiance(dataset, model));
+            return scale * Real3(no_diff hosek_wilkie::sky_radiance(dataset, model));
         }
 
         /* Sky plus the solar disc if `direction` falls inside it. */
         [Differentiable]
-        public v3<Real> radiance(no_diff v3<Real> direction) {
+        public Real3 radiance(no_diff Real3 direction) {
             var result = sky(direction);
             if (sun_scale > Real(0) && dot(direction, sun_direction) >= sun_cos_radius) {
                 let model = no_diff v3<float>(hosek_wilkie::to_model<Real>(no_diff to_local_direction(direction)));
-                result += scale * sun_scale * v3<Real>(no_diff hosek_wilkie::sun_radiance(dataset, model));
+                result += scale * sun_scale * Real3(no_diff hosek_wilkie::sun_radiance(dataset, model));
             }
             return result;
         }
 
         /* Uniform direction in the cone around the sun. */
-        public v3<Real> sample_sun_cone(v2<Real> uv) {
+        public Real3 sample_sun_cone(Real2 uv) {
             let cos_theta = Real(1) - uv.y * (Real(1) - sun_cos_radius);
             let sin_theta = safe_sqrt(Real(1) - cos_theta * cos_theta);
             let phi = constants<Real>::two_pi * uv.x;
-            return Frame<Real>(sun_direction).to_world(v3<Real>(sin_theta * cos(phi), sin_theta * sin(phi), cos_theta));
+            return Frame<Real>(sun_direction).to_world(Real3(sin_theta * cos(phi), sin_theta * sin(phi), cos_theta));
         }
 
         /* Solid-angle density of the two lobes, for MIS. The hemisphere term is counted
            for every direction so the density never hits zero, which would make an
            integrator's MIS weight divide zero by zero. */
-        public Real pdf_of(SurfaceInteraction<Real> si, v3<Real> direction) {
+        public Real pdf_of(SurfaceInteraction<Real> si, Real3 direction) {
             var pdf = (Real(1) - sun_select_pdf) * warp::square_to_uniform_hemisphere_pdf<Real>();
             if (dot(direction, sun_direction) >= sun_cos_radius)
                 pdf += sun_select_pdf / sun_solid_angle();
             return pdf;
         }
 
-        [Differentiable] public DirectionSample<Real> sample_direction(SurfaceInteraction<Real> si, v3<Real> uv) {
+        [Differentiable] public DirectionSample<Real> sample_direction(SurfaceInteraction<Real> si, Real3 uv) {
             DirectionSample<Real> ds;
-            ds.sp.position = v3<Real>(0);
+            ds.sp.position = Real3(0);
             // uv.z picks the lobe, uv.xy warps within it
             if (uv.z < sun_select_pdf)
                 ds.direction = no_diff sample_sun_cone(uv.xy);
@@ -81,7 +81,7 @@ namespace emitters {
                 ds.direction = si.sp.frame.to_world(warp::square_to_uniform_hemisphere<Real>(uv.xy));
             ds.distance = Real(10000.0);
             ds.sp.frame = Frame<Real>(-ds.direction);
-            ds.sp.geometric_normal = v3<Real>(Real(0.0), Real(0.0), Real(1.0));
+            ds.sp.geometric_normal = Real3(Real(0.0), Real(0.0), Real(1.0));
             ds.sp.area = Real(0);
             ds.pdf = no_diff pdf_of(si, ds.direction);
             ds.delta = false;
@@ -89,7 +89,7 @@ namespace emitters {
             return ds;
         }
 
-        [Differentiable] public RaySample<Real> sample_ray(v3<Real> uv_pos, v2<Real> uv_dir) {
+        [Differentiable] public RaySample<Real> sample_ray(Real3 uv_pos, Real2 uv_dir) {
             let direction = warp::square_to_uniform_sphere<Real>(uv_dir);
             let weight = radiance(direction) * constants<Real>::four_pi;
             return { Ray<Real>(warp::square_to_uniform_hemisphere<Real>(uv_pos.xy) * Real(10000.0), direction), weight };
@@ -99,18 +99,18 @@ namespace emitters {
             return no_diff pdf_of(si, ds.direction);
         }
 
-        [Differentiable] public v3<Real> evaluate_direction(SurfaceInteraction<Real> si, v3<Real> uv) {
+        [Differentiable] public Real3 evaluate_direction(SurfaceInteraction<Real> si, Real3 uv) {
             let ds = sample_direction(si, uv);
-            if (ds.pdf <= Real(0)) return v3<Real>(Real(0));
+            if (ds.pdf <= Real(0)) return Real3(Real(0));
             return ds.sp.emission * abs(dot(ds.direction, si.sp.frame.normal())) / ds.pdf;
         }
 
-        [Differentiable] public v3<Real> evaluate_hit(Ray<Real> ray, HitInfo hi) {
+        [Differentiable] public Real3 evaluate_hit(Ray<Real> ray, HitInfo hi) {
             return radiance(normalize(ray.direction));
         }
 
         public uint intersect(inout Ray<Real> ray, const uint cullmode,
-                        inout v2<Real> barycentric, inout uint primitive_idx, inout uint geometry_idx) {
+                        inout Real2 barycentric, inout uint primitive_idx, inout uint geometry_idx) {
             return 0;
         }
     };

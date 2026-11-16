@@ -8,10 +8,6 @@ namespace sensors {
         Real fov_x, near, far;
         public films::HDRTexture2D<Real, 4> sfilm;
 
-        typealias Real2 = vector<Real, 2>;
-        typealias Real3 = vector<Real, 3>;
-        typealias Real4 = vector<Real, 4>;
-
         public enum class FovAxis { X, Y };
         public __init(Real fov, FovAxis fov_axis = FovAxis::X, Real near = Real(0.01), Real far = Real(10000)) {
             if (fov_axis == FovAxis::Y) {
@@ -38,7 +34,7 @@ namespace sensors {
 
         // world space to sensor space
         [Differentiable]
-        public Real4 splat(vector<Real, 4> point) {
+        public Real4 splat(Real4 point) {
             return mul(mul(point, to_sensor.to_transform().forward), to_sample.to_transform().forward);
         }
 

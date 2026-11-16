@@ -9,7 +9,7 @@ namespace rfilters {
         }
 
         [Differentiable]
-        public FilterSample<Real> sample(v2<Real> uv) {
+        public FilterSample<Real> sample(Real2 uv) {
             return { (uv * Real(2) - Real(1)) * radius, Real(1) };
         }
 

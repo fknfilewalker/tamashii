@@ -2,12 +2,12 @@ implementing tamashii;
 
 namespace bsdfs {
     public struct Plastic<Real : floating_point> : IBsdf<Real>, IDifferentiable {
-        public Texture<vector<Real, 3>> reflectance;
+        public Texture<Real3> reflectance;
         public Texture<Real> roughness;
         public Texture<Real> eta_i;
         public Texture<Real> eta_t;
 
-        public __init(Texture<vector<Real, 3>> reflectance) {
+        public __init(Texture<Real3> reflectance) {
             this.reflectance = reflectance;
             eta_i = Texture<Real>(1.0f);
             eta_t = Texture<Real>(1.5f);
@@ -15,18 +15,18 @@ namespace bsdfs {
         }
 
         [Differentiable]
-        public vector<Real, 3> get_reflectance(SurfaceInteraction<Real> si) {
+        public Real3 get_reflectance(SurfaceInteraction<Real> si) {
             return reflectance.sample(si.sp.uv);
         }
 
         [Differentiable]
-        public BsdfSample<Real> sample(SurfaceInteraction<Real> si, no_diff v3<Real> uvw) {
+        public BsdfSample<Real> sample(SurfaceInteraction<Real> si, no_diff Real3 uvw) {
             let mf = microfacet::GGX<Real>(roughness.sample(si.sp.uv));
             bool rough = mf.roughness > Real(0.01);
 
             Real _eta_i = eta_i.sample(si.sp.uv);
             Real _eta_t = eta_t.sample(si.sp.uv);
-            v3<Real> m = rough ? mf.sample_vndf(si.wi, uvw.xy) : si.sp.geometric_normal;
+            Real3 m = rough ? mf.sample_vndf(si.wi, uvw.xy) : si.sp.geometric_normal;
             // make sure m points in same hemisphere direction
             m *= Real(sign(dot(m, si.sp.geometric_normal)));
 
@@ -65,7 +65,7 @@ namespace bsdfs {
         }
 
         [Differentiable]
-        public vector<Real, 3> eval(SurfaceInteraction<Real> si, v3<Real> wo) {
+        public Real3 eval(SurfaceInteraction<Real> si, Real3 wo) {
             let mf = microfacet::GGX<Real>(roughness.sample(si.sp.uv));
             bool rough = mf.roughness > Real(0.01);
 
@@ -74,7 +74,7 @@ namespace bsdfs {
             Real widotn = Frame<Real>::cos_theta(si.wi);
             Real wodotn = Frame<Real>::cos_theta(wo);
             const bool reflection = (widotn * wodotn) >= Real(0.0f);
-            v3<Real> m;
+            Real3 m;
             if (reflection) m = halfvector(si.wi, wo);
             else m = halfvector(si.wi, wo, _eta_i, _eta_t);
             m *= Real(sign(dot(m, si.sp.geometric_normal)));
@@ -85,13 +85,13 @@ namespace bsdfs {
 
             Real widotm = dot(si.wi, m);
             Real wodotm = dot(wo, m);
-            v3<Real> diffuse = constants<Real>::inv_pi;
+            Real3 diffuse = constants<Real>::inv_pi;
             Real specular = rough ? ggx * microfacet::torrance_sparrow(widotn, wodotn) : Real(0);
             return reflectance.sample(si.sp.uv) * lerp(diffuse, specular, fi) * max(wodotn, Real(0));
         }
 
         [Differentiable]
-        public Real pdf(SurfaceInteraction<Real> si, v3<Real> wo) {
+        public Real pdf(SurfaceInteraction<Real> si, Real3 wo) {
             let mf = microfacet::GGX<Real>(roughness.sample(si.sp.uv));
             bool rough = mf.roughness > Real(0.01);
 
@@ -100,7 +100,7 @@ namespace bsdfs {
             Real widotn = Frame<Real>::cos_theta(si.wi);
             Real wodotn = Frame<Real>::cos_theta(wo);
             const bool reflection = (widotn * wodotn) >= Real(0.0f);
-            v3<Real> m;
+            Real3 m;
             if (reflection) m = halfvector(si.wi, wo);
             else m = halfvector(si.wi, wo, _eta_i, _eta_t);
             m *= Real(sign(dot(m, si.sp.geometric_normal)));

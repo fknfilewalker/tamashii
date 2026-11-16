@@ -2,7 +2,7 @@ implementing tamashii;
 
 namespace films {
     public struct HDRTexture2D<Real : atomicable_floating_point, let N : int> : IFilm<Real, N> {
-        public no_diff DiffTensor<vector<Real, N>, 2> texture;
+        public no_diff DiffTensor<RealN, 2> texture;
 
         public Real aspect() {
             return Real(texture.shape[1]) / Real(texture.shape[0]);
@@ -20,25 +20,25 @@ namespace films {
         }
 
         [Differentiable]
-        public void add(vector<Real, N> value, vector<int, 4> coords, Optional<SurfaceInteraction<Real>> si = {}) {
+        public void add(RealN value, vector<int, 4> coords, Optional<SurfaceInteraction<Real>> si = {}) {
             texture.add(coords.xy, value);
         }
 
         [Differentiable]
-        public void atomic_add(vector<Real, N> value, vector<int, 4> coords, Optional<SurfaceInteraction<Real>> si = {}) {
+        public void atomic_add(RealN value, vector<int, 4> coords, Optional<SurfaceInteraction<Real>> si = {}) {
             texture.atomic_add(coords.xy, value);
         }
 
         [Differentiable]
-        public vector<Real, N> read(vector<int, 4> coords, Optional<SurfaceInteraction<Real>> si) {
+        public RealN read(vector<int, 4> coords, Optional<SurfaceInteraction<Real>> si) {
             return no_diff texture[coords.xy];
         }
 
-        [Differentiable, mutating] public void interpolate_add<let M : int>(vector<Real, N> value, Array<vector<int, 4>, M> coords, Array<vector<Real, N>, M> weights, Optional<SurfaceInteraction<Real>> si = {}) {
+        [Differentiable, mutating] public void interpolate_add<let M : int>(RealN value, Array<vector<int, 4>, M> coords, Array<RealN, M> weights, Optional<SurfaceInteraction<Real>> si = {}) {
 
         }
 
-        [Differentiable] public vector<Real, N> interpolate_read<let M : int>(Array<vector<int, 4>, M> coords, Array<vector<Real, N>, M> weights, Optional<SurfaceInteraction<Real>> si = {}) {
+        [Differentiable] public RealN interpolate_read<let M : int>(Array<vector<int, 4>, M> coords, Array<RealN, M> weights, Optional<SurfaceInteraction<Real>> si = {}) {
             return {};
         }
 

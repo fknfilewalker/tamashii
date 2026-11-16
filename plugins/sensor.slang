@@ -11,12 +11,22 @@ public struct LensSample<Real : floating_point> : IDifferentiable {
 
 [anyValueSize(settings::sensor_interface_size)]
 public interface ISensor<Real : atomicable_floating_point> {
-    [Differentiable] public v4<Real> splat(v4<Real> point);
-    [Differentiable] public RaySample<Real> sample_ray(v2<Real> uv);
-    [Differentiable] public RaySample<Real> sample_ray(v2<Real> uv, vector<int, 4> coords); // includes rfilter
-    [Differentiable] public LensSample<Real> sample_lens(SurfaceInteraction<Real> si, v3<Real> uv);
+    [Differentiable] public Real4 splat(Real4 point);
+    [Differentiable] public RaySample<Real> sample_ray(Real2 uv);
+    [Differentiable] public RaySample<Real> sample_ray(Real2 uv, vector<int, 4> coords); // includes rfilter
+    [Differentiable] public LensSample<Real> sample_lens(SurfaceInteraction<Real> si, Real3 uv);
     public IFilm<Real, 4> film();
 };
+
+extension<Real, T> T
+where Real : __BuiltinFloatingPointType
+where Real : IArithmeticAtomicable
+where T : ISensor<Real>
+{
+    typealias Real2 = vector<Real, 2>;
+    typealias Real3 = vector<Real, 3>;
+    typealias Real4 = vector<Real, 4>;
+}
 
 namespace sensors {
     public interface ICamera<Real : atomicable_floating_point> : ISensor<Real> {
