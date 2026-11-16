@@ -2,27 +2,27 @@ implementing tamashii;
 
 namespace bsdfs {
     public struct Conductor<Real : floating_point> : IBsdf<Real>, IDifferentiable {
-        public Texture<Real3> reflectance;
+        public Texture<vector<Real, 3>> reflectance;
         public Texture<Real> roughness;
-        public Texture<Real3> eta;
-        public Texture<Real3> k;
+        public Texture<vector<Real, 3>> eta;
+        public Texture<vector<Real, 3>> k;
 
         [Differentiable]
-        public Real3 get_reflectance(SurfaceInteraction<Real> si) {
+        public vector<Real, 3> get_reflectance(SurfaceInteraction<Real> si) {
             return reflectance.sample(si.sp.uv);
         }
 
         [Differentiable]
-        public BsdfSample<Real> sample(SurfaceInteraction<Real> si, no_diff Real3 uvw) {
+        public BsdfSample<Real> sample(SurfaceInteraction<Real> si, no_diff v3<Real> uvw) {
             let mf = microfacet::GGX<Real>(roughness.sample(si.sp.uv));
             bool rough = mf.roughness > Real(0.01);
 
-            Real3 m = rough ? mf.sample_vndf(si.wi, uvw.xy) : si.sp.geometric_normal;
-            // Real3 m = rough ? mf.sample(uvw.xy) : si.sp.geometric_normal;
+            v3<Real> m = rough ? mf.sample_vndf(si.wi, uvw.xy) : si.sp.geometric_normal;
+            // v3<Real> m = rough ? mf.sample(uvw.xy) : si.sp.geometric_normal;
             // make sure m points in same hemisphere direction
             m *= Real(sign(dot(m, si.sp.geometric_normal)));
 
-            const Real3 fi = fresnel::schlick(abs(Frame<Real>::cos_theta(si.wi)), reflectance.sample(si.sp.uv));
+            const v3<Real> fi = fresnel::schlick(abs(Frame<Real>::cos_theta(si.wi)), reflectance.sample(si.sp.uv));
 
             BsdfSample<Real> sample;
             sample.wo = reflect(-si.wi, m);
@@ -52,33 +52,33 @@ namespace bsdfs {
         }
 
         [Differentiable]
-        public Real3 eval(SurfaceInteraction<Real> si, Real3 wo) {
+        public vector<Real, 3> eval(SurfaceInteraction<Real> si, v3<Real> wo) {
             let mf = microfacet::GGX<Real>(roughness.sample(si.sp.uv));
             bool rough = mf.roughness > Real(0.01);
 
-            Real3 m = halfvector(si.wi, wo);
+            v3<Real> m = halfvector(si.wi, wo);
             m *= Real(sign(dot(m, si.sp.geometric_normal)));
             
             Real widotn = Frame<Real>::cos_theta(si.wi);
             Real wodotn = Frame<Real>::cos_theta(wo);
-            const Real3 fi = fresnel::schlick(abs(widotn), reflectance.sample(si.sp.uv));
+            const v3<Real> fi = fresnel::schlick(abs(widotn), reflectance.sample(si.sp.uv));
             Real ggx = mf.d(Frame<Real>::cos_theta(m)) * mf.g(widotn, wodotn);
             Real specular = rough ? ggx * microfacet::torrance_sparrow(widotn, wodotn) : Real(0);
             return specular * fi * max(wodotn, Real(0));
         }
 
         [Differentiable]
-        public Real pdf(SurfaceInteraction<Real> si, Real3 wo) {
+        public Real pdf(SurfaceInteraction<Real> si, v3<Real> wo) {
             let mf = microfacet::GGX<Real>(roughness.sample(si.sp.uv));
             bool rough = mf.roughness > Real(0.01);
 
             Real widotn = Frame<Real>::cos_theta(si.wi);
             Real wodotn = Frame<Real>::cos_theta(wo);
             const bool reflection = (widotn * wodotn) >= Real(0.0f);
-            Real3 m = halfvector(si.wi, wo);
+            v3<Real> m = halfvector(si.wi, wo);
             m *= Real(sign(dot(m, si.sp.geometric_normal)));
 
-            const Real3 fi = fresnel::schlick(abs(widotn), reflectance.sample(si.sp.uv));
+            const v3<Real> fi = fresnel::schlick(abs(widotn), reflectance.sample(si.sp.uv));
 
             Real widotm = dot(si.wi, m);
             Real wodotm = dot(wo, m);

@@ -4,6 +4,10 @@ namespace sensors {
     public struct Area<Real : atomicable_floating_point> : ISensor<Real> , IDifferentiable {
         public IShape<Real>* shape; // must have film
 
+        typealias Real2 = vector<Real, 2>;
+        typealias Real3 = vector<Real, 3>;
+        typealias Real4 = vector<Real, 4>;
+
         public __init() {
             shape = nullptr;
         }
@@ -15,7 +19,7 @@ namespace sensors {
 
 
         [Differentiable]
-        public Real4 splat(Real4 point) {
+        public Real4 splat(vector<Real, 4> point) {
             return {};
         }
 
@@ -32,7 +36,7 @@ namespace sensors {
         }
 
         [Differentiable]
-        public LensSample<Real> sample_lens(SurfaceInteraction<Real> si, Real3 uv) {
+        public LensSample<Real> sample_lens(SurfaceInteraction<Real> si, v3<Real> uv) {
             let ssample = shape.sample_surface(uv); 
             LensSample<Real> ls;
             ls.direction = ssample.sp.position - si.sp.position;

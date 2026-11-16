@@ -10,13 +10,13 @@ namespace emitters {
             this.shape = nullptr;
         }
 
-        [Differentiable] public DirectionSample<Real> sample_direction(SurfaceInteraction<Real> si, Real3 uv) {
+        [Differentiable] public DirectionSample<Real> sample_direction(SurfaceInteraction<Real> si, v3<Real> uv) {
             return shape->sample_direction(si, uv);
         }
 
-        [Differentiable] public RaySample<Real> sample_ray(Real3 uv_pos, Real2 uv_dir) {
+        [Differentiable] public RaySample<Real> sample_ray(v3<Real> uv_pos, v2<Real> uv_dir) {
             SurfaceSample<Real> ss = shape->sample_surface(uv_pos);
-            Real3 wo = warp::square_to_cosine_hemisphere<Real>(uv_dir);
+            v3<Real> wo = warp::square_to_cosine_hemisphere<Real>(uv_dir);
             let weight = shape->emission * constants<Real>::pi / ss.pdf;
             return { Ray<Real>(ss.sp.position, ss.sp.frame.to_world(wo)), weight };
         }
@@ -25,17 +25,17 @@ namespace emitters {
             return shape->pdf_direction(si, ds);
         }
 
-        [Differentiable] public Real3 evaluate_direction(SurfaceInteraction<Real> si, Real3 uv) {
+        [Differentiable] public v3<Real> evaluate_direction(SurfaceInteraction<Real> si, v3<Real> uv) {
             let ds = shape->sample_direction(si, uv);
             return ds.sp.emission * abs(dot(ds.direction, si.sp.frame.normal())) / ds.pdf;
         }
 
-        [Differentiable] public Real3 evaluate_hit(Ray<Real> ray, HitInfo hi) {
-            return shape->surface_interaction(ray, hi.primitive, Real2(hi.attribute)).sp.emission;
+        [Differentiable] public v3<Real> evaluate_hit(Ray<Real> ray, HitInfo hi) {
+            return shape->surface_interaction(ray, hi.primitive, v2<Real>(hi.attribute)).sp.emission;
         }
 
         public uint intersect(inout Ray<Real> ray, const uint cullmode,
-                        inout Real2 barycentric, inout uint primitive_idx, inout uint geometry_idx) {
+                        inout v2<Real> barycentric, inout uint primitive_idx, inout uint geometry_idx) {
             return shape->intersect(ray, cullmode, barycentric, primitive_idx, geometry_idx);
         }
     };

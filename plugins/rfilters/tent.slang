@@ -16,8 +16,8 @@ namespace rfilters {
         }
 
         [Differentiable]
-        public FilterSample<Real> sample(Real2 uv) {
-            let offset = Real2(
+        public FilterSample<Real> sample(v2<Real> uv) {
+            let offset = v2<Real>(
                 no_diff sample_offset(uv.x), no_diff sample_offset(uv.y));
             return { offset, Real(1) };
         }

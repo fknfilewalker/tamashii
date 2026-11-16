@@ -5,31 +5,21 @@ public dyn interface IEmitter<Real : atomicable_floating_point> {
     public property DiffTensor<m4x4<Real>, 1> to_world;
 
     /* Returns a direction sample to the emitter from the given surface point */
-    [Differentiable] public DirectionSample<Real> sample_direction(SurfaceInteraction<Real> si, Real3 uv);
+    [Differentiable] public DirectionSample<Real> sample_direction(SurfaceInteraction<Real> si, v3<Real> uv);
     /* Returns a ray sample from the emitter */
-    [Differentiable] public RaySample<Real> sample_ray(Real3 uv_pos, Real2 uv_dir);
+    [Differentiable] public RaySample<Real> sample_ray(v3<Real> uv_pos, v2<Real> uv_dir);
     /* Returns the solid angle pdf for sampling this direction (for MIS) */
     [Differentiable] public Real pdf_direction(SurfaceInteraction<Real> si, DirectionSample<Real> ds);
 
     /* Returns the throughput from si to the point `uv` on the emitter. */
-    [Differentiable] public Real3 evaluate_direction(SurfaceInteraction<Real> si, Real3 uv);
+    [Differentiable] public v3<Real> evaluate_direction(SurfaceInteraction<Real> si, v3<Real> uv);
 
     /* Returns the radiance in case this emitter was hit by a ray */
-    [Differentiable] public Real3 evaluate_hit(Ray<Real> ray, HitInfo hi);
+    [Differentiable] public v3<Real> evaluate_hit(Ray<Real> ray, HitInfo hi);
 
     public uint intersect(inout Ray<Real> ray, const uint cullmode,
-                              inout Real2 barycentric, inout uint primitive_idx, inout uint geometry_idx);
+                              inout v2<Real> barycentric, inout uint primitive_idx, inout uint geometry_idx);
 };
-
-extension<Real, T> T
-where Real : __BuiltinFloatingPointType
-where Real : IArithmeticAtomicable
-where T : IEmitter<Real>
-{
-    typealias Real2 = vector<Real, 2>;
-    typealias Real3 = vector<Real, 3>;
-    typealias Real4 = vector<Real, 4>;
-}
 
 namespace emitters {
     [Differentiable]
