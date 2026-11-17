@@ -4,11 +4,11 @@ namespace emitters {
     public struct Point<Real : atomicable_floating_point> : IEmitter<Real>, IDifferentiable {
         public no_diff DiffTensor<m4x4<Real>, 1> to_world;
         public Texture<Real> profile; // equal to watt/sr or watt/4pi
-        public v3<Real> color;
+        public Spectrum<Real> color;
 
         public __init() {
             this.to_world = DiffTensor<m4x4<Real>, 1>();
-            this.color = v3<Real>(Real(1.0));
+            this.color = Spectrum<Real>(Real(1.0));
             this.profile = Texture<Real>(Real(1.0));
         }
 
@@ -49,12 +49,12 @@ namespace emitters {
             return Real(0.0);
         }
 
-        [Differentiable] public v3<Real> evaluate_direction(SurfaceInteraction<Real> si, v3<Real> uv) {
+        [Differentiable] public Spectrum<Real> evaluate_direction(SurfaceInteraction<Real> si, v3<Real> uv) {
             let ds = sample_direction(si, uv);
             return ds.sp.emission * abs(dot(ds.direction, si.sp.frame.normal())) / ds.pdf;
         }
 
-        [Differentiable] public v3<Real> evaluate_hit(Ray<Real> ray, HitInfo hi) {
+        [Differentiable] public Spectrum<Real> evaluate_hit(Ray<Real> ray, HitInfo hi) {
             return v3<Real>(Real(0.0));
         }
 

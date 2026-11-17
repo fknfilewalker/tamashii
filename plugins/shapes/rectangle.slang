@@ -6,14 +6,14 @@ namespace shapes {
         public AABB<Real> aabb;
         public IBsdf<Real>* bsdf;
         public IFilm<Real, 4>* film;
-        public v3<Real> emission;
+        public Spectrum<Real> emission;
 
         __init(v2<Real> scale = v2<Real>(Real(1))) {
             this.to_world = DiffTensor<m4x4<Real>, 1>();
             this.aabb = AABB<Real>(v3<Real>(Real(-0.5), Real(0), Real(-0.5)), v3<Real>(Real(0.5), Real(0), Real(0.5)));
             this.bsdf = nullptr;
             this.film = nullptr;
-            this.emission = v3<Real>(Real(0));
+            this.emission = Spectrum<Real>(Real(0));
         }
 
         public uint primitive_count() { return 2; }

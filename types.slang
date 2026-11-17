@@ -644,7 +644,7 @@ public struct SurfacePoint<Real : floating_point> : IDifferentiable {
     public Real area;
     public Frame<Real> frame; // smooth normal -> .normal()
     public v3<Real> geometric_normal; // in local frame
-    public v3<Real> emission;
+    public Spectrum<Real> emission;
     public uint primitive;
     public v2<Real> uv;
     public v2<Real> attribute;
@@ -666,7 +666,7 @@ public struct DirectionSample<Real : floating_point> : IDifferentiable {
 
 public struct RaySample<Real : floating_point> : IDifferentiable {
     public Ray<Real> ray;
-    public v3<Real> weight; // importance/radiance aka throughput
+    public Spectrum<Real> weight; // importance/radiance aka throughput
 };
 
 public struct SurfaceInteraction<Real : floating_point> : IDifferentiable {

@@ -2,13 +2,13 @@ implementing tamashii;
 
 namespace bsdfs {
     public struct Conductor<Real : floating_point> : IBsdf<Real>, IDifferentiable {
-        public Texture<vector<Real, 3>> reflectance;
+        public Texture<Spectrum<Real>> reflectance;
         public Texture<Real> roughness;
-        public Texture<vector<Real, 3>> eta;
-        public Texture<vector<Real, 3>> k;
+        public Texture<Spectrum<Real>> eta;
+        public Texture<Spectrum<Real>> k;
 
         [Differentiable]
-        public vector<Real, 3> get_reflectance(SurfaceInteraction<Real> si) {
+        public Spectrum<Real> get_reflectance(SurfaceInteraction<Real> si) {
             return reflectance.sample(si.sp.uv);
         }
 
@@ -22,7 +22,7 @@ namespace bsdfs {
             // make sure m points in same hemisphere direction
             m *= Real(sign(dot(m, si.sp.geometric_normal)));
 
-            const v3<Real> fi = fresnel::schlick(abs(Frame<Real>::cos_theta(si.wi)), reflectance.sample(si.sp.uv));
+            const Spectrum<Real> fi = fresnel::schlick(abs(Frame<Real>::cos_theta(si.wi)), reflectance.sample(si.sp.uv));
 
             BsdfSample<Real> sample;
             sample.wo = reflect(-si.wi, m);
@@ -52,7 +52,7 @@ namespace bsdfs {
         }
 
         [Differentiable]
-        public vector<Real, 3> eval(SurfaceInteraction<Real> si, v3<Real> wo) {
+        public Spectrum<Real> eval(SurfaceInteraction<Real> si, v3<Real> wo) {
             let mf = microfacet::GGX<Real>(roughness.sample(si.sp.uv));
             bool rough = mf.roughness > Real(0.01);
 
@@ -61,7 +61,7 @@ namespace bsdfs {
             
             Real widotn = Frame<Real>::cos_theta(si.wi);
             Real wodotn = Frame<Real>::cos_theta(wo);
-            const v3<Real> fi = fresnel::schlick(abs(widotn), reflectance.sample(si.sp.uv));
+            const Spectrum<Real> fi = fresnel::schlick(abs(widotn), reflectance.sample(si.sp.uv));
             Real ggx = mf.d(Frame<Real>::cos_theta(m)) * mf.g(widotn, wodotn);
             Real specular = rough ? ggx * microfacet::torrance_sparrow(widotn, wodotn) : Real(0);
             return specular * fi * max(wodotn, Real(0));
@@ -78,7 +78,7 @@ namespace bsdfs {
             v3<Real> m = halfvector(si.wi, wo);
             m *= Real(sign(dot(m, si.sp.geometric_normal)));
 
-            const v3<Real> fi = fresnel::schlick(abs(widotn), reflectance.sample(si.sp.uv));
+            const Spectrum<Real> fi = fresnel::schlick(abs(widotn), reflectance.sample(si.sp.uv));
 
             Real widotm = dot(si.wi, m);
             Real wodotm = dot(wo, m);

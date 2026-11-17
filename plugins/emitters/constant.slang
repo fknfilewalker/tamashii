@@ -3,11 +3,11 @@ implementing tamashii;
 namespace emitters {
     public struct Constant<Real : atomicable_floating_point> : IEmitter<Real>, IDifferentiable {
         public no_diff DiffTensor<m4x4<Real>, 1> to_world;
-        public Texture<v3<Real>> radiance;
+        public Texture<Spectrum<Real>> radiance;
 
         public __init() {
             this.to_world = DiffTensor<m4x4<Real>, 1>();
-            this.radiance = Texture<v3<Real>>(v3<Real>(Real(1.0)));
+            this.radiance = Texture<Spectrum<Real>>(Spectrum<Real>(Real(1.0)));
         }
 
         [Differentiable] public v2<Real> uv_from_direction(v3<Real> dir) {
@@ -41,12 +41,12 @@ namespace emitters {
             return warp::square_to_uniform_hemisphere_pdf<Real>();
         }
 
-        [Differentiable] public v3<Real> evaluate_direction(SurfaceInteraction<Real> si, v3<Real> uv) {
+        [Differentiable] public Spectrum<Real> evaluate_direction(SurfaceInteraction<Real> si, v3<Real> uv) {
             let ds = sample_direction(si, uv);
             return ds.sp.emission * abs(dot(ds.direction, si.sp.frame.normal())) / ds.pdf;
         }
 
-        [Differentiable] public v3<Real> evaluate_hit(Ray<Real> ray, HitInfo hi) {
+        [Differentiable] public Spectrum<Real> evaluate_hit(Ray<Real> ray, HitInfo hi) {
             return radiance.sample(uv_from_direction(ray.direction));
         }
 

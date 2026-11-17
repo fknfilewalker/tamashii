@@ -2,12 +2,12 @@ implementing tamashii;
 
 namespace bsdfs {
     public struct Dielectric<Real : floating_point> : IBsdf<Real>, IDifferentiable {
-        public Texture<vector<Real, 3>> reflectance;
+        public Texture<Spectrum<Real>> reflectance;
         public Texture<Real> roughness;
         public Texture<Real> eta_i;
         public Texture<Real> eta_t;
 
-        public __init(Texture<vector<Real, 3>> reflectance) {
+        public __init(Texture<Spectrum<Real>> reflectance) {
             this.reflectance = reflectance;
             eta_i = Texture<Real>(1.0f);
             eta_t = Texture<Real>(1.5f);
@@ -15,7 +15,7 @@ namespace bsdfs {
         }
 
         [Differentiable]
-        public vector<Real, 3> get_reflectance(SurfaceInteraction<Real> si) {
+        public Spectrum<Real> get_reflectance(SurfaceInteraction<Real> si) {
             return reflectance.sample(si.sp.uv);
         }
 
@@ -81,7 +81,7 @@ namespace bsdfs {
         }
 
         [Differentiable]
-        public vector<Real, 3> eval(SurfaceInteraction<Real> si, v3<Real> wo) {
+        public Spectrum<Real> eval(SurfaceInteraction<Real> si, v3<Real> wo) {
             let mf = microfacet::GGX<Real>(roughness.sample(si.sp.uv));
             bool rough = mf.roughness > Real(0.01);
 
@@ -101,8 +101,8 @@ namespace bsdfs {
 
             Real widotm = dot(si.wi, m);
             Real wodotm = dot(wo, m);
-            if (!rough) return v3<Real>(0);
-            v3<Real> value = reflectance.sample(si.sp.uv);
+            if (!rough) return Spectrum<Real>(0);
+            Spectrum<Real> value = reflectance.sample(si.sp.uv);
             if (reflection) value *= fi * ggx * microfacet::torrance_sparrow(widotn, wodotn);
             else {
                 value *= (Real(1) - fi) * ggx * microfacet::torrance_sparrow(widotm, wodotm, widotn, wodotn, _eta_i, _eta_t);

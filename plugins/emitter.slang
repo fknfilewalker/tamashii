@@ -12,10 +12,10 @@ public dyn interface IEmitter<Real : atomicable_floating_point> {
     [Differentiable] public Real pdf_direction(SurfaceInteraction<Real> si, DirectionSample<Real> ds);
 
     /* Returns the throughput from si to the point `uv` on the emitter. */
-    [Differentiable] public v3<Real> evaluate_direction(SurfaceInteraction<Real> si, v3<Real> uv);
+    [Differentiable] public Spectrum<Real> evaluate_direction(SurfaceInteraction<Real> si, v3<Real> uv);
 
     /* Returns the radiance in case this emitter was hit by a ray */
-    [Differentiable] public v3<Real> evaluate_hit(Ray<Real> ray, HitInfo hi);
+    [Differentiable] public Spectrum<Real> evaluate_hit(Ray<Real> ray, HitInfo hi);
 
     public uint intersect(inout Ray<Real> ray, const uint cullmode,
                               inout v2<Real> barycentric, inout uint primitive_idx, inout uint geometry_idx);
@@ -23,7 +23,7 @@ public dyn interface IEmitter<Real : atomicable_floating_point> {
 
 namespace emitters {
     [Differentiable]
-    public v3<Real> evaluate_direction<Real : atomicable_floating_point>(IEmitter<Real> emitter, no_diff SurfaceInteraction<Real> si, no_diff v3<Real> uv) {
+    public Spectrum<Real> evaluate_direction<Real : atomicable_floating_point>(IEmitter<Real> emitter, no_diff SurfaceInteraction<Real> si, no_diff v3<Real> uv) {
         return emitter.evaluate_direction(si, uv);
     }
 
@@ -32,24 +32,24 @@ namespace emitters {
        another dyn call -- Area goes through shape-> -- fails to pack. Forward has no such problem,
        so it uses the wrapper above directly. An emitter missing here gets no gradient. */
     [Differentiable]
-    public v3<Real> evaluate_direction<Real : atomicable_floating_point>(no_diff Area<Real> emitter, no_diff SurfaceInteraction<Real> si, no_diff v3<Real> uv) {
+    public Spectrum<Real> evaluate_direction<Real : atomicable_floating_point>(no_diff Area<Real> emitter, no_diff SurfaceInteraction<Real> si, no_diff v3<Real> uv) {
         return emitter.evaluate_direction(si, uv);
     }
     [Differentiable]
-    public v3<Real> evaluate_direction<Real : atomicable_floating_point>(no_diff Point<Real> emitter, no_diff SurfaceInteraction<Real> si, no_diff v3<Real> uv) {
+    public Spectrum<Real> evaluate_direction<Real : atomicable_floating_point>(no_diff Point<Real> emitter, no_diff SurfaceInteraction<Real> si, no_diff v3<Real> uv) {
         return emitter.evaluate_direction(si, uv);
     }
     [Differentiable]
-    public v3<Real> evaluate_direction<Real : atomicable_floating_point>(no_diff Constant<Real> emitter, no_diff SurfaceInteraction<Real> si, no_diff v3<Real> uv) {
+    public Spectrum<Real> evaluate_direction<Real : atomicable_floating_point>(no_diff Constant<Real> emitter, no_diff SurfaceInteraction<Real> si, no_diff v3<Real> uv) {
         return emitter.evaluate_direction(si, uv);
     }
     [Differentiable]
-    public v3<Real> evaluate_direction<Real : atomicable_floating_point>(no_diff HosekWilkie<Real> emitter, no_diff SurfaceInteraction<Real> si, no_diff v3<Real> uv) {
+    public Spectrum<Real> evaluate_direction<Real : atomicable_floating_point>(no_diff HosekWilkie<Real> emitter, no_diff SurfaceInteraction<Real> si, no_diff v3<Real> uv) {
         return emitter.evaluate_direction(si, uv);
     }
 
     /* `d` lands on to_world's gradient tensor -- for an area light, on the shape's. */
-    public void evaluate_direction_bwd<Real : atomicable_floating_point>(IEmitter<Real> *emitter, SurfaceInteraction<Real> si, v3<Real> uv, v3<Real>.Differential d) {
+    public void evaluate_direction_bwd<Real : atomicable_floating_point>(IEmitter<Real> *emitter, SurfaceInteraction<Real> si, v3<Real> uv, Spectrum<Real>.Differential d) {
         IEmitter<Real> e = *emitter;
         if (let area = e as Area<Real>) __bwd_diff(evaluate_direction)(area, si, uv, d);
         else if (let point = e as Point<Real>) __bwd_diff(evaluate_direction)(point, si, uv, d);

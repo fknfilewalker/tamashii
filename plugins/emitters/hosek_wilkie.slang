@@ -37,18 +37,18 @@ namespace emitters {
 
         /* Sky radiance, without the solar disc. */
         [Differentiable]
-        public v3<Real> sky(no_diff v3<Real> direction) {
+        public Spectrum<Real> sky(no_diff v3<Real> direction) {
             let model = no_diff v3<float>(hosek_wilkie::to_model<Real>(no_diff to_local_direction(direction)));
-            return scale * v3<Real>(no_diff hosek_wilkie::sky_radiance(dataset, model));
+            return scale * Spectrum<Real>(no_diff hosek_wilkie::sky_radiance(dataset, model));
         }
 
         /* Sky plus the solar disc if `direction` falls inside it. */
         [Differentiable]
-        public v3<Real> radiance(no_diff v3<Real> direction) {
+        public Spectrum<Real> radiance(no_diff v3<Real> direction) {
             var result = sky(direction);
             if (sun_scale > Real(0) && dot(direction, sun_direction) >= sun_cos_radius) {
                 let model = no_diff v3<float>(hosek_wilkie::to_model<Real>(no_diff to_local_direction(direction)));
-                result += scale * sun_scale * v3<Real>(no_diff hosek_wilkie::sun_radiance(dataset, model));
+                result += scale * sun_scale * Spectrum<Real>(no_diff hosek_wilkie::sun_radiance(dataset, model));
             }
             return result;
         }
@@ -99,13 +99,13 @@ namespace emitters {
             return no_diff pdf_of(si, ds.direction);
         }
 
-        [Differentiable] public v3<Real> evaluate_direction(SurfaceInteraction<Real> si, v3<Real> uv) {
+        [Differentiable] public Spectrum<Real> evaluate_direction(SurfaceInteraction<Real> si, v3<Real> uv) {
             let ds = sample_direction(si, uv);
             if (ds.pdf <= Real(0)) return v3<Real>(Real(0));
             return ds.sp.emission * abs(dot(ds.direction, si.sp.frame.normal())) / ds.pdf;
         }
 
-        [Differentiable] public v3<Real> evaluate_hit(Ray<Real> ray, HitInfo hi) {
+        [Differentiable] public Spectrum<Real> evaluate_hit(Ray<Real> ray, HitInfo hi) {
             return radiance(normalize(ray.direction));
         }
 

@@ -7,7 +7,7 @@ public dyn interface IShape<Real : atomicable_floating_point> {
     public property AABB<Real> aabb;
     public property IBsdf<Real>* bsdf;
     public property IFilm<Real, 4>* film; // optional
-    public property v3<Real> emission;
+    public property Spectrum<Real> emission;
 
     /* Number of primitives in this shape */
     public uint primitive_count();

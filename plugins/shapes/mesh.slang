@@ -90,7 +90,7 @@ namespace shapes {
         public AABB<Real> aabb;
         public Ptr<IBsdf<Real>> bsdf;
         public IFilm<Real, 4>* film;
-        public v3<Real> emission;
+        public Spectrum<Real> emission;
         public no_diff DiffTensor<v3<Real>, 1> positions;
         public no_diff Tensor<v3<Real>, 1> normals;
         public no_diff Tensor<v2<Real>, 1> texcoords_0;
@@ -102,7 +102,7 @@ namespace shapes {
             this.to_world = DiffTensor<m4x4<Real>, 1>();
             this.bsdf = nullptr;
             this.film = nullptr;
-            this.emission = v3<Real>(Real(0), Real(0), Real(0));
+            this.emission = Spectrum<Real>(Real(0), Real(0), Real(0));
             this.positions = DiffTensor<v3<Real>, 1>();
             this.normals = Tensor<v3<Real>, 1>();
             this.texcoords_0 = Tensor<v2<Real>, 1>();

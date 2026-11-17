@@ -25,12 +25,12 @@ namespace emitters {
             return shape->pdf_direction(si, ds);
         }
 
-        [Differentiable] public v3<Real> evaluate_direction(SurfaceInteraction<Real> si, v3<Real> uv) {
+        [Differentiable] public Spectrum<Real> evaluate_direction(SurfaceInteraction<Real> si, v3<Real> uv) {
             let ds = shape->sample_direction(si, uv);
             return ds.sp.emission * abs(dot(ds.direction, si.sp.frame.normal())) / ds.pdf;
         }
 
-        [Differentiable] public v3<Real> evaluate_hit(Ray<Real> ray, HitInfo hi) {
+        [Differentiable] public Spectrum<Real> evaluate_hit(Ray<Real> ray, HitInfo hi) {
             return shape->surface_interaction(ray, hi.primitive, v2<Real>(hi.attribute)).sp.emission;
         }
 

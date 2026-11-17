@@ -2,14 +2,14 @@ implementing tamashii;
 
 namespace bsdfs {
     public struct Diffuse<Real : floating_point> : IBsdf<Real>, IDifferentiable {
-        public Texture<vector<Real, 3>> reflectance;
+        public Texture<Spectrum<Real>> reflectance;
 
-        public __init(Texture<vector<Real, 3>> reflectance) {
+        public __init(Texture<Spectrum<Real>> reflectance) {
             this.reflectance = reflectance;
         }
 
         [Differentiable]
-        public vector<Real, 3> get_reflectance(SurfaceInteraction<Real> si) {
+        public Spectrum<Real> get_reflectance(SurfaceInteraction<Real> si) {
             return reflectance.sample(si.sp.uv);
         }
 
@@ -25,7 +25,7 @@ namespace bsdfs {
         }
 
         [Differentiable]
-        public vector<Real, 3> eval(SurfaceInteraction<Real> si, v3<Real> wo) {
+        public Spectrum<Real> eval(SurfaceInteraction<Real> si, v3<Real> wo) {
             return reflectance.sample(si.sp.uv) * constants<Real>::inv_pi * max(Real(0), wo.z);
         }
 

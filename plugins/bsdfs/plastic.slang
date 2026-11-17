@@ -2,12 +2,12 @@ implementing tamashii;
 
 namespace bsdfs {
     public struct Plastic<Real : floating_point> : IBsdf<Real>, IDifferentiable {
-        public Texture<vector<Real, 3>> reflectance;
+        public Texture<Spectrum<Real>> reflectance;
         public Texture<Real> roughness;
         public Texture<Real> eta_i;
         public Texture<Real> eta_t;
 
-        public __init(Texture<vector<Real, 3>> reflectance) {
+        public __init(Texture<Spectrum<Real>> reflectance) {
             this.reflectance = reflectance;
             eta_i = Texture<Real>(1.0f);
             eta_t = Texture<Real>(1.5f);
@@ -15,7 +15,7 @@ namespace bsdfs {
         }
 
         [Differentiable]
-        public vector<Real, 3> get_reflectance(SurfaceInteraction<Real> si) {
+        public Spectrum<Real> get_reflectance(SurfaceInteraction<Real> si) {
             return reflectance.sample(si.sp.uv);
         }
 
@@ -65,7 +65,7 @@ namespace bsdfs {
         }
 
         [Differentiable]
-        public vector<Real, 3> eval(SurfaceInteraction<Real> si, v3<Real> wo) {
+        public Spectrum<Real> eval(SurfaceInteraction<Real> si, v3<Real> wo) {
             let mf = microfacet::GGX<Real>(roughness.sample(si.sp.uv));
             bool rough = mf.roughness > Real(0.01);
 
@@ -85,7 +85,7 @@ namespace bsdfs {
 
             Real widotm = dot(si.wi, m);
             Real wodotm = dot(wo, m);
-            v3<Real> diffuse = constants<Real>::inv_pi;
+            Spectrum<Real> diffuse = constants<Real>::inv_pi;
             Real specular = rough ? ggx * microfacet::torrance_sparrow(widotn, wodotn) : Real(0);
             return reflectance.sample(si.sp.uv) * lerp(diffuse, specular, fi) * max(wodotn, Real(0));
         }
